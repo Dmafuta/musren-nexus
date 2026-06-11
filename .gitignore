@@ -1,0 +1,34 @@
+# ─── Frontend ─────────────────────────────────────────────────────────────────
+musren-nexus-frontend/node_modules/
+musren-nexus-frontend/dist/
+musren-nexus-frontend/dist-ssr/
+musren-nexus-frontend/.output/
+musren-nexus-frontend/.vinxi/
+musren-nexus-frontend/.tanstack/
+musren-nexus-frontend/.nitro/
+musren-nexus-frontend/.env
+musren-nexus-frontend/.env.*
+musren-nexus-frontend/*.local
+
+# ─── Backend ──────────────────────────────────────────────────────────────────
+musren-nexus-backend/backend/target/
+musren-nexus-backend/backend/.env
+musren-nexus-backend/backend/.env.*
+musren-nexus-backend/.env
+musren-nexus-backend/.env.*
+*.jar
+*.war
+*.class
+
+# ─── IDE / OS ─────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log

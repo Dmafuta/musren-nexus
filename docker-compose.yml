@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+
+  # ─── Spring Boot Backend ────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./musren-nexus-backend/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # Database — Supabase PostgreSQL via connection pooler (PgBouncer, port 6543)
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-6543}
+      DB_NAME: ${DB_NAME:-postgres}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Supabase
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
+
+      # M-Pesa
+      MPESA_CONSUMER_KEY: ${MPESA_CONSUMER_KEY}
+      MPESA_CONSUMER_SECRET: ${MPESA_CONSUMER_SECRET}
+      MPESA_SHORTCODE: ${MPESA_SHORTCODE}
+      MPESA_PASSKEY: ${MPESA_PASSKEY}
+      MPESA_INITIATOR_NAME: ${MPESA_INITIATOR_NAME}
+      MPESA_SECURITY_CREDENTIAL: ${MPESA_SECURITY_CREDENTIAL}
+      MPESA_ENV: ${MPESA_ENV:-sandbox}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+
+      # Africa's Talking
+      AT_USERNAME: ${AT_USERNAME:-sandbox}
+      AT_API_KEY: ${AT_API_KEY}
+      AT_SENDER_ID: ${AT_SENDER_ID:-MUSREN}
+
+      # Mail
+      MAIL_HOST: ${MAIL_HOST:-smtp.resend.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-resend}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM:-noreply@musren.co.ke}
+      MAIL_SUPPORT: ${MAIL_SUPPORT:-support@musren.co.ke}
+
+      # CORS — allow the frontend origin
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ─── Frontend (dev server) ───────────────────────────────────────────────────
+  frontend:
+    image: oven/bun:1
+    working_dir: /app
+    volumes:
+      - ./musren-nexus-frontend:/app
+    ports:
+      - "5173:5173"
+    command: bun run dev --host 0.0.0.0
+    environment:
+      VITE_SUPABASE_URL: ${SUPABASE_URL}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      VITE_API_URL: http://localhost:8080
+    depends_on:
+      backend:
+        condition: service_healthy

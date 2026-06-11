@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.tg_role_request_grant() FROM PUBLIC, anon, authenticated;
