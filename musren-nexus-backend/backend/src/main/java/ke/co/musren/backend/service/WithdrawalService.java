@@ -241,6 +241,36 @@ public class WithdrawalService {
         log.info("Withdrawal marked failed: id={}, reason={}", withdrawalId, reason);
     }
 
+    /**
+     * Credits a customer's cash wallet after a successful M-Pesa STK Push.
+     * Calls the credit_wallet_topup Supabase RPC (service_role only).
+     */
+    public void creditWalletTopup(String userId, int amountCents, String mpesaReceipt)
+            throws IOException, InterruptedException {
+
+        Map<String, Object> rpcArgs = new java.util.HashMap<>();
+        rpcArgs.put("_user_id", userId);
+        rpcArgs.put("_amount_cents", amountCents);
+        if (mpesaReceipt != null && !mpesaReceipt.isBlank()) {
+            rpcArgs.put("_mpesa_receipt", mpesaReceipt);
+        }
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(supabaseUrl + "/rest/v1/rpc/credit_wallet_topup"))
+                .header("apikey", serviceRoleKey)
+                .header("Authorization", "Bearer " + serviceRoleKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(rpcArgs)))
+                .timeout(Duration.ofSeconds(10))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() >= 300) {
+            throw new IOException("credit_wallet_topup RPC failed [" + response.statusCode() + "]: " + response.body());
+        }
+        log.info("Wallet credited: userId={}, amountCents={}, receipt={}", userId, amountCents, mpesaReceipt);
+    }
+
     private String fetchUserEmail(String userId) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(supabaseUrl + "/rest/v1/profiles?user_id=eq." + userId + "&select=email"))

@@ -118,14 +118,24 @@ public class MpesaWebhookController {
                 String receipt = extractCallbackMetaItem(body, "MpesaReceiptNumber");
                 log.info("STK Push success: checkoutId={}, receipt={}", checkoutId, receipt);
 
-                orderOpt.ifPresent(order -> {
+                if (orderOpt.isPresent()) {
+                    PaymentOrder order = orderOpt.get();
                     order.setStatus("paid");
                     order.setMpesaReceipt(receipt);
                     paymentOrderRepository.save(order);
                     log.info("PaymentOrder updated to paid: id={}", order.getId());
-                });
 
-                if (orderOpt.isEmpty()) {
+                    // Credit the customer's wallet in Supabase
+                    try {
+                        withdrawalService.creditWalletTopup(
+                                order.getUserId().toString(),
+                                order.getAmountCents(),
+                                receipt
+                        );
+                    } catch (Exception creditEx) {
+                        log.error("Failed to credit wallet for order {}: {}", order.getId(), creditEx.getMessage(), creditEx);
+                    }
+                } else {
                     log.warn("STK callback: no PaymentOrder found for checkoutId={}", checkoutId);
                 }
 
