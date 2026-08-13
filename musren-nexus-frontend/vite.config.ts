@@ -12,4 +12,19 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  vite: {
+    server: {
+      proxy: {
+        "/api": {
+          target: "http://127.0.0.1:8000",
+          changeOrigin: true,
+          // Keep TanStack Start's own /api/public/* routes local
+          bypass: (req) => {
+            if (req.url?.startsWith("/api/public/")) return req.url;
+            return null;
+          },
+        },
+      },
+    },
+  },
 });

@@ -1,4 +1,6 @@
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8081";
+// In dev, Vite proxies /api/* → http://127.0.0.1:8000 (Laravel).
+// In production, set VITE_API_URL to the backend origin (e.g. https://api.musren.co.ke).
+const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
 const TOKEN_KEY = "musren_token";
 
 export function getToken(): string | null {

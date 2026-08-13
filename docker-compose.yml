@@ -46,7 +46,7 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM:-noreply@musren.co.ke}
       MAIL_FROM_NAME: "Musren Connect"
 
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8082}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8081,http://localhost:8082,https://musren.quantumconnect.africa}
 
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8000/api/health"]
