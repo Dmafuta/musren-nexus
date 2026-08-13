@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Wallet, TrendingUp, Sparkles, Link2, Copy, Send, Plus, Loader2, BellRing,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
 import { api } from "@/lib/api-client";
 import { AffiliateShell as SiteLayout } from "@/components/layouts/AffiliateShell";
 import { Section } from "@/components/site/Section";
@@ -55,64 +54,48 @@ function AffiliateDashboard() {
 }
 
 function DashboardContent({ userId, email }: { userId: string; email: string }) {
-  const qc = useQueryClient();
-
-  // Realtime polling placeholder — realtime will be added via webhooks in a future phase
-  void qc;
-
   const wallet = useQuery({
     queryKey: ["aff-wallet", userId],
-    queryFn: async () => {
-      const { data } = await (supabase as any).from("affiliate_wallets").select("*").eq("user_id", userId).maybeSingle();
-      return data ?? { balance_points: 0, pending_points: 0, lifetime_points: 0, balance_cash_cents: 0 };
-    },
+    queryFn: () => api.get<{ balance_points: number; pending_points: number; lifetime_points: number; balance_cash_cents: number }>("/api/affiliate/wallet"),
   });
 
   const promotions = useQuery({
     queryKey: ["aff-promos"],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("affiliate_promotions")
-        .select("id,name,description,multiplier,starts_at,ends_at")
-        .eq("active", true).eq("public_visible", true)
-        .order("multiplier", { ascending: false });
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>("/api/affiliate/promotions");
+      return res.data ?? [];
     },
   });
 
   const rates = useQuery({
     queryKey: ["aff-rates"],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("loyalty_exchange_rates")
-        .select("kind,points,value_amount,label,starts_at,ends_at")
-        .eq("active", true);
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>("/api/affiliate/rates");
+      return res.data ?? [];
     },
   });
 
   const events = useQuery({
     queryKey: ["aff-events", userId],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("affiliate_events").select("*")
-        .eq("user_id", userId).order("occurred_at", { ascending: false }).limit(15);
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>("/api/affiliate/events");
+      return res.data ?? [];
     },
   });
 
   const withdrawals = useQuery({
     queryKey: ["aff-withdrawals", userId],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("withdrawal_requests").select("*")
-        .eq("user_id", userId).order("created_at", { ascending: false }).limit(10);
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>("/api/affiliate/withdrawals");
+      return res.data ?? [];
     },
   });
 
   const notifications = useQuery({
     queryKey: ["aff-notifications", userId],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("affiliate_notifications").select("*")
-        .eq("user_id", userId).order("created_at", { ascending: false }).limit(8);
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>("/api/affiliate/notifications");
+      return res.data ?? [];
     },
   });
 
@@ -289,9 +272,8 @@ function ReferralLinksCard({ userId }: { userId: string }) {
   const codes = useQuery({
     queryKey: ["aff-codes", userId],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("affiliate_referral_codes").select("*")
-        .eq("user_id", userId).eq("active", true).order("created_at", { ascending: false });
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>("/api/affiliate/codes");
+      return res.data ?? [];
     },
   });
 
@@ -299,10 +281,7 @@ function ReferralLinksCard({ userId }: { userId: string }) {
     mutationFn: async () => {
       const c = code.trim();
       if (!c.match(/^[a-zA-Z0-9_-]{3,32}$/)) throw new Error("Code must be 3–32 chars: letters, numbers, _ or -");
-      const { error } = await (supabase as any).from("affiliate_referral_codes").insert({
-        user_id: userId, code: c, product_slug: productSlug || null,
-      });
-      if (error) throw error;
+      await api.post("/api/affiliate/codes", { code: c, product_slug: productSlug || null });
     },
     onSuccess: () => {
       toast.success("Referral code created");
@@ -366,10 +345,9 @@ function RedeemCard({ userId, balance, rates }: { userId: string; balance: numbe
   const submit = useMutation({
     mutationFn: async () => {
       if (points <= 0) throw new Error("Enter a points amount");
-      const { error } = await (supabase as any).rpc("affiliate_request_withdrawal", {
-        _method: method, _amount_points: points, _destination: destination || null,
+      await api.post("/api/affiliate/withdraw", {
+        method, amount_points: points, destination: destination || null,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Withdrawal submitted");

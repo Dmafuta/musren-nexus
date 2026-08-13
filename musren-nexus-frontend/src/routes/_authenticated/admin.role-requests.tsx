@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowLeft, CheckCircle2, XCircle, ShieldAlert, Clock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { AdminShell as SiteLayout } from "@/components/layouts/AdminShell";
 import { Section } from "@/components/site/Section";
@@ -72,23 +72,17 @@ function RoleRequestsContent() {
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ["role-requests", tab],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("role_requests")
-        .select("*")
-        .eq("status", tab)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as RoleRequest[];
+      const res = await api.get<{ data: RoleRequest[] }>(`/api/admin/role-requests?status=${tab}`);
+      return res.data ?? [];
     },
   });
 
   const review = useMutation({
     mutationFn: async (input: { id: string; status: "approved" | "rejected"; notes: string }) => {
-      const { error } = await supabase
-        .from("role_requests")
-        .update({ status: input.status, reviewer_notes: input.notes || null })
-        .eq("id", input.id);
-      if (error) throw error;
+      await api.patch(`/api/admin/role-requests/${input.id}`, {
+        status: input.status,
+        reviewer_notes: input.notes || null,
+      });
     },
     onSuccess: (_d, vars) => {
       toast.success(vars.status === "approved" ? "Request approved and role granted" : "Request rejected");
@@ -215,3 +209,5 @@ function StatusBadge({ status }: { status: Status }) {
   if (status === "rejected") return <Badge className="bg-red-500/15 text-red-400 border-red-500/30"><XCircle className="size-3 mr-1" />Rejected</Badge>;
   return <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30"><Clock className="size-3 mr-1" />Pending</Badge>;
 }
+
+void ShieldAlert;

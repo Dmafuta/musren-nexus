@@ -1,17 +1,16 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import {
   ArrowLeft, Copy, Download, Link2, MessageCircle, Mail, Facebook,
-  Send, Share2, Loader2, ImageIcon, Video, FileText, Twitter,
+  Send, Share2, ImageIcon, Video, FileText, Twitter,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { AffiliateShell as SiteLayout } from "@/components/layouts/AffiliateShell";
 import { Section } from "@/components/site/Section";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { products, getProduct } from "@/lib/products";
 import { toast } from "sonner";
@@ -69,10 +68,8 @@ function PromoteContent({ userId, product }: { userId: string; product: ReturnTy
   const codes = useQuery({
     queryKey: ["promote-codes", userId, product.slug],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("affiliate_referral_codes")
-        .select("code, product_slug, active")
-        .eq("user_id", userId).eq("active", true);
-      return (data ?? []) as Array<{ code: string; product_slug: string | null }>;
+      const res = await api.get<{ data: Array<{ code: string; product_slug: string | null }> }>("/api/affiliate/codes");
+      return res.data ?? [];
     },
   });
 
@@ -92,36 +89,24 @@ function PromoteContent({ userId, product }: { userId: string; product: ReturnTy
   const assets = useQuery({
     queryKey: ["promote-assets", product.slug],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("product_assets")
-        .select("*").eq("product_slug", product.slug).eq("active", true)
-        .order("created_at", { ascending: false });
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>(`/api/affiliate/assets?product_slug=${product.slug}`);
+      return res.data ?? [];
     },
   });
 
   const templates = useQuery({
     queryKey: ["promote-templates", product.slug],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("share_templates")
-        .select("*").eq("product_slug", product.slug).eq("active", true);
-      return (data ?? []) as Array<{ channel: Channel; body: string; cta: string | null }>;
+      const res = await api.get<{ data: Array<{ channel: Channel; body: string; cta: string | null }> }>(`/api/affiliate/templates?product_slug=${product.slug}`);
+      return res.data ?? [];
     },
   });
 
   const channelStats = useQuery({
     queryKey: ["promote-stats", userId, product.slug],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("affiliate_events")
-        .select("kind, channel")
-        .eq("user_id", userId).eq("product_slug", product.slug);
-      const by: Record<string, { clicks: number; signups: number }> = {};
-      (data ?? []).forEach((e: any) => {
-        const ch = e.channel ?? "unknown";
-        by[ch] = by[ch] ?? { clicks: 0, signups: 0 };
-        if (e.kind === "click") by[ch].clicks++;
-        if (e.kind === "signup") by[ch].signups++;
-      });
-      return by;
+      const data = await api.get<Record<string, { clicks: number; signups: number }>>(`/api/affiliate/channel-stats?product_slug=${product.slug}`);
+      return data;
     },
   });
 
@@ -142,9 +127,11 @@ function PromoteContent({ userId, product }: { userId: string; product: ReturnTy
 
   const logShare = async (channel: Channel) => {
     if (!code) return;
-    await (supabase as any).from("affiliate_shares").insert({
-      user_id: userId, code, product_slug: product.slug, channel,
-    });
+    try {
+      await api.post("/api/affiliate/shares", { code, product_slug: product.slug, channel });
+    } catch {
+      // Non-critical: don't block the share action
+    }
   };
 
   const onShare = async (ch: Channel) => {
@@ -311,5 +298,4 @@ function AssetCard({ asset }: { asset: any }) {
   );
 }
 
-void Input;
-void Loader2;
+void products;

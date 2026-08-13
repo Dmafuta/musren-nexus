@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Check, Wallet } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 
 const useCases = [
   "Staff airtime allowances",
@@ -97,27 +97,28 @@ export function CorporateTopupForm() {
     }
 
     setLoading(true);
-    const { error } = await supabase.from("corporate_topup_inquiries").insert({
-      company: parsed.data.company,
-      industry: parsed.data.industry ?? null,
-      contact_name: parsed.data.contactName,
-      email: parsed.data.email,
-      phone: parsed.data.phone,
-      role: parsed.data.role ?? null,
-      network: parsed.data.network,
-      estimated_volume: parsed.data.volume,
-      frequency: parsed.data.frequency,
-      use_cases: parsed.data.useCases,
-      preferred_contact: parsed.data.preferredContact,
-      notes: parsed.data.notes ?? null,
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      await api.post("/api/corporate-topup", {
+        company:           parsed.data.company,
+        industry:          parsed.data.industry ?? null,
+        contact_name:      parsed.data.contactName,
+        email:             parsed.data.email,
+        phone:             parsed.data.phone,
+        role:              parsed.data.role ?? null,
+        network:           parsed.data.network,
+        estimated_volume:  parsed.data.volume,
+        frequency:         parsed.data.frequency,
+        use_cases:         parsed.data.useCases,
+        preferred_contact: parsed.data.preferredContact,
+        notes:             parsed.data.notes ?? null,
+      });
+      setSubmitted(true);
+      toast.success("Inquiry received — our corporate desk will be in touch.");
+    } catch (err) {
+      toast.error((err as Error).message || "Could not submit. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setSubmitted(true);
-    toast.success("Inquiry received — our corporate desk will be in touch.");
   };
 
   if (submitted) {
@@ -146,7 +147,6 @@ export function CorporateTopupForm() {
         </div>
       </div>
 
-      {/* Company */}
       <fieldset className="space-y-4">
         <legend className="text-xs uppercase tracking-widest text-primary">Company</legend>
         <div className="grid sm:grid-cols-2 gap-5">
@@ -155,7 +155,6 @@ export function CorporateTopupForm() {
         </div>
       </fieldset>
 
-      {/* Contact */}
       <fieldset className="space-y-4">
         <legend className="text-xs uppercase tracking-widest text-primary">Primary contact</legend>
         <div className="grid sm:grid-cols-2 gap-5">
@@ -166,7 +165,6 @@ export function CorporateTopupForm() {
         </div>
       </fieldset>
 
-      {/* Volumes */}
       <fieldset className="space-y-4">
         <legend className="text-xs uppercase tracking-widest text-primary">Estimated volumes</legend>
         <div className="grid sm:grid-cols-3 gap-5">
@@ -176,7 +174,6 @@ export function CorporateTopupForm() {
         </div>
       </fieldset>
 
-      {/* Use cases */}
       <fieldset className="space-y-4">
         <legend className="text-xs uppercase tracking-widest text-primary">Use case</legend>
         <div className="grid sm:grid-cols-2 gap-3">
@@ -203,7 +200,6 @@ export function CorporateTopupForm() {
         </div>
       </fieldset>
 
-      {/* Preferred contact */}
       <fieldset className="space-y-4">
         <legend className="text-xs uppercase tracking-widest text-primary">Preferred contact method</legend>
         <RadioGroup

@@ -5,7 +5,7 @@ import { Pencil, Loader2 } from "lucide-react";
 import { MerchantShell } from "@/components/layouts/MerchantShell";
 import { Section } from "@/components/site/Section";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,28 +102,14 @@ function RewardRulesTable() {
   const rulesQuery = useQuery<RewardRule[]>({
     queryKey: ["merchant-reward-rules"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("affiliate_reward_rules")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      const res = await api.get<{ data: RewardRule[] }>("/api/merchant/reward-rules");
+      return res.data ?? [];
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, values }: { id: string; values: EditForm }) => {
-      const { error } = await (supabase as any)
-        .from("affiliate_reward_rules")
-        .update({
-          click_points: values.click_points,
-          signup_points: values.signup_points,
-          purchase_points: values.purchase_points,
-          revenue_share_bps: values.revenue_share_bps,
-          max_daily_points: values.max_daily_points,
-        })
-        .eq("id", id);
-      if (error) throw error;
+      await api.patch(`/api/merchant/reward-rules/${id}`, values);
     },
     onSuccess: () => {
       toast.success("Reward rule updated");

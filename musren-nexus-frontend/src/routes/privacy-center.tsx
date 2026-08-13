@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { useConsent, CONSENT_CATEGORIES, POLICY_VERSION, type ConsentCategory } from "@/hooks/use-consent";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
@@ -36,12 +36,9 @@ function PrivacyCenterPage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("user_consents")
-      .select("id, category, granted, policy_version, created_at, source")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(100)
-      .then(({ data }) => setHistory(data ?? []));
+    api.get<{ data: typeof history }>("/api/consent/my-consents")
+      .then((res) => setHistory(res.data ?? []))
+      .catch(() => setHistory([]));
   }, [user, choices]);
 
   const handleSave = async () => {

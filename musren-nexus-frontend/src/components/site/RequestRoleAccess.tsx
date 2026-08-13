@@ -1,11 +1,17 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Send, CheckCircle2, Clock, XCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+
+interface RoleRequestData {
+  id: string;
+  status: "pending" | "approved" | "rejected";
+  reviewer_notes: string | null;
+}
 
 export function RequestRoleAccess({ role }: { role: "developer" | "affiliate" }) {
   const { user } = useAuth();
@@ -16,27 +22,17 @@ export function RequestRoleAccess({ role }: { role: "developer" | "affiliate" })
     queryKey: ["my-role-request", user?.id, role],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("role_requests")
-        .select("*")
-        .eq("user_id", user!.id)
-        .eq("requested_role", role)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      const res = await api.get<{ data: RoleRequestData | null }>(`/api/roles/my-request?role=${role}`);
+      return res.data ?? null;
     },
   });
 
   const submit = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("role_requests").insert({
-        user_id: user!.id,
+      await api.post("/api/roles/request", {
         requested_role: role,
         message: message.trim() || null,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Request submitted. We'll be in touch soon.");

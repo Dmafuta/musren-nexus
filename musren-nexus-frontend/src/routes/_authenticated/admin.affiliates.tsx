@@ -2,12 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft, Settings2, Sparkles, Coins, Trophy, ShieldCheck, Wallet, Plus, Save, CheckCircle2, XCircle, Loader2,
-  ImageIcon, Megaphone, Trash2, Upload,
+  ArrowLeft, Settings2, Sparkles, Coins, Trophy, Wallet, Plus, Save, CheckCircle2, XCircle, Loader2,
+  ImageIcon, Megaphone, Trash2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
-import { getToken } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { AdminShell as SiteLayout } from "@/components/layouts/AdminShell";
 import { Section } from "@/components/site/Section";
 import { Button } from "@/components/ui/button";
@@ -50,14 +49,13 @@ function AffiliateAdminPage() {
           </Link>
         </div>
         <Tabs defaultValue="rules">
-          <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full">
+          <TabsList className="grid grid-cols-4 lg:grid-cols-7 w-full">
             <TabsTrigger value="rules"><Settings2 className="size-4 mr-1.5" />Rules</TabsTrigger>
             <TabsTrigger value="assets"><ImageIcon className="size-4 mr-1.5" />Assets</TabsTrigger>
             <TabsTrigger value="templates"><Megaphone className="size-4 mr-1.5" />Templates</TabsTrigger>
             <TabsTrigger value="promos"><Sparkles className="size-4 mr-1.5" />Promotions</TabsTrigger>
             <TabsTrigger value="rates"><Coins className="size-4 mr-1.5" />Exchange</TabsTrigger>
             <TabsTrigger value="withdrawals"><Wallet className="size-4 mr-1.5" />Payouts</TabsTrigger>
-            <TabsTrigger value="config"><ShieldCheck className="size-4 mr-1.5" />Config</TabsTrigger>
             <TabsTrigger value="board"><Trophy className="size-4 mr-1.5" />Leaderboard</TabsTrigger>
           </TabsList>
           <TabsContent value="rules" className="mt-6"><RulesTab canEdit={hasRole("admin")} /></TabsContent>
@@ -66,7 +64,6 @@ function AffiliateAdminPage() {
           <TabsContent value="promos" className="mt-6"><PromotionsTab canEdit={hasRole("admin")} /></TabsContent>
           <TabsContent value="rates" className="mt-6"><RatesTab canEdit={hasRole("admin")} /></TabsContent>
           <TabsContent value="withdrawals" className="mt-6"><WithdrawalsTab /></TabsContent>
-          <TabsContent value="config" className="mt-6"><ConfigTab canEdit={hasRole("admin")} /></TabsContent>
           <TabsContent value="board" className="mt-6"><LeaderboardTab /></TabsContent>
         </Tabs>
       </Section>
@@ -80,15 +77,14 @@ function RulesTab({ canEdit }: { canEdit: boolean }) {
   const { data: rules = [], isLoading } = useQuery({
     queryKey: ["aff-admin-rules"],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("affiliate_reward_rules").select("*").order("product_slug");
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>("/api/admin/affiliate-reward-rules");
+      return res.data ?? [];
     },
   });
 
   const upsert = useMutation({
     mutationFn: async (row: any) => {
-      const { error } = await (supabase as any).from("affiliate_reward_rules").upsert(row, { onConflict: "product_slug" });
-      if (error) throw error;
+      await api.post("/api/admin/affiliate-reward-rules", row);
     },
     onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["aff-admin-rules"] }); },
     onError: (e: Error) => toast.error(e.message),
@@ -157,17 +153,17 @@ function PromotionsTab({ canEdit }: { canEdit: boolean }) {
   const { data: promos = [] } = useQuery({
     queryKey: ["aff-admin-promos"],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("affiliate_promotions").select("*, promotion_products(product_slug)").order("created_at", { ascending: false });
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>("/api/admin/affiliate-promotions");
+      return res.data ?? [];
     },
   });
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await (supabase as any).from("affiliate_promotions").update({ active }).eq("id", id);
-      if (error) throw error;
+      await api.patch(`/api/admin/affiliate-promotions/${id}`, { active });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aff-admin-promos"] }),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   return (
@@ -185,14 +181,10 @@ function PromotionsTab({ canEdit }: { canEdit: boolean }) {
               <div className="font-semibold flex items-center gap-2">{p.name}
                 <Badge className="bg-primary/15 text-primary border-primary/30">{Number(p.multiplier).toFixed(2)}×</Badge>
                 {p.public_visible && <Badge variant="outline" className="text-xs">visible</Badge>}
-                {p.notify_affiliates && <Badge variant="outline" className="text-xs">notifies</Badge>}
               </div>
               {p.description && <p className="text-sm text-muted-foreground mt-1">{p.description}</p>}
               <div className="text-xs text-muted-foreground mt-2">
-                {new Date(p.starts_at).toLocaleString()} → {p.ends_at ? new Date(p.ends_at).toLocaleString() : "no end"}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                Products: {p.promotion_products?.length ? p.promotion_products.map((x: any) => x.product_slug).join(", ") : "all"}
+                {p.starts_at ? new Date(p.starts_at).toLocaleString() : "—"} → {p.ends_at ? new Date(p.ends_at).toLocaleString() : "no end"}
               </div>
             </div>
             {canEdit && (
@@ -211,32 +203,22 @@ function NewPromotionForm({ onDone }: { onDone: () => void }) {
   const [form, setForm] = useState({
     name: "", description: "", multiplier: "2",
     starts_at: new Date().toISOString().slice(0, 16),
-    ends_at: "", public_visible: true, notify_affiliates: true,
-    product_slugs: [] as string[],
+    ends_at: "", public_visible: true,
   });
   const create = useMutation({
     mutationFn: async () => {
       if (!form.name.trim()) throw new Error("Name required");
-      const { data: p, error } = await (supabase as any).from("affiliate_promotions").insert({
+      await api.post("/api/admin/affiliate-promotions", {
         name: form.name, description: form.description || null,
         multiplier: parseFloat(form.multiplier),
         starts_at: new Date(form.starts_at).toISOString(),
         ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
-        public_visible: form.public_visible, notify_affiliates: form.notify_affiliates, active: true,
-      }).select("id").single();
-      if (error) throw error;
-      if (form.product_slugs.length) {
-        const rows = form.product_slugs.map((s) => ({ promotion_id: p.id, product_slug: s }));
-        const { error: e2 } = await (supabase as any).from("promotion_products").insert(rows);
-        if (e2) throw e2;
-      }
+        public_visible: form.public_visible, active: true,
+      });
     },
     onSuccess: () => { toast.success("Promotion created"); onDone(); },
     onError: (e: Error) => toast.error(e.message),
   });
-  const toggleProduct = (slug: string) => setForm((f) => ({
-    ...f, product_slugs: f.product_slugs.includes(slug) ? f.product_slugs.filter((s) => s !== slug) : [...f.product_slugs, slug],
-  }));
   return (
     <div className="glass rounded-2xl p-5 space-y-3">
       <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Promotion name" className="glass" />
@@ -249,17 +231,8 @@ function NewPromotionForm({ onDone }: { onDone: () => void }) {
         <label className="space-y-1"><span className="text-xs text-muted-foreground">Ends (optional)</span>
           <Input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} className="glass" /></label>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {products.map((p) => (
-          <button key={p.slug} type="button" onClick={() => toggleProduct(p.slug)}
-            className={`text-xs px-3 py-1.5 rounded-full border transition ${form.product_slugs.includes(p.slug) ? "bg-primary/15 border-primary/40 text-primary" : "border-border text-muted-foreground"}`}>
-            {p.name}
-          </button>
-        ))}
-      </div>
       <div className="flex flex-wrap gap-4 text-sm">
         <label className="flex items-center gap-2">Public visible <Switch checked={form.public_visible} onCheckedChange={(v) => setForm({ ...form, public_visible: v })} /></label>
-        <label className="flex items-center gap-2">Notify affiliates <Switch checked={form.notify_affiliates} onCheckedChange={(v) => setForm({ ...form, notify_affiliates: v })} /></label>
       </div>
       <Button onClick={() => create.mutate()} disabled={create.isPending} className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
         {create.isPending ? <Loader2 className="size-4 animate-spin" /> : "Create promotion"}
@@ -274,28 +247,31 @@ function RatesTab({ canEdit }: { canEdit: boolean }) {
   const { data: rates = [] } = useQuery({
     queryKey: ["aff-admin-rates"],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("loyalty_exchange_rates").select("*").order("kind").order("starts_at", { ascending: false });
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>("/api/admin/affiliate-rates");
+      return res.data ?? [];
     },
   });
   const [form, setForm] = useState({ kind: "cash", points: "100", value_amount: "1000", label: "" });
+
   const create = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase as any).from("loyalty_exchange_rates").insert({
-        kind: form.kind, points: +form.points, value_amount: +form.value_amount, label: form.label || null, active: true,
+      await api.post("/api/admin/affiliate-rates", {
+        kind: form.kind, points: +form.points, value_amount: +form.value_amount,
+        label: form.label || null, active: true,
       });
-      if (error) throw error;
     },
     onSuccess: () => { toast.success("Rate added"); qc.invalidateQueries({ queryKey: ["aff-admin-rates"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+
   const toggle = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await (supabase as any).from("loyalty_exchange_rates").update({ active }).eq("id", id);
-      if (error) throw error;
+      await api.patch(`/api/admin/affiliate-rates/${id}`, { active });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["aff-admin-rates"] }),
+    onError: (e: Error) => toast.error(e.message),
   });
+
   return (
     <div className="space-y-4">
       {canEdit && (
@@ -325,7 +301,7 @@ function RatesTab({ canEdit }: { canEdit: boolean }) {
           <div>
             <div className="font-medium capitalize">{r.kind}: {r.points} pts → {r.value_amount} {r.kind === "data" ? "MB" : "cents"}</div>
             {r.label && <div className="text-xs text-muted-foreground">{r.label}</div>}
-            <div className="text-xs text-muted-foreground">{new Date(r.starts_at).toLocaleString()} {r.ends_at ? `→ ${new Date(r.ends_at).toLocaleString()}` : ""}</div>
+            <div className="text-xs text-muted-foreground">{r.created_at ? new Date(r.created_at).toLocaleString() : ""}</div>
           </div>
           {canEdit && <Switch checked={r.active} onCheckedChange={(v) => toggle.mutate({ id: r.id, active: v })} />}
         </div>
@@ -337,40 +313,25 @@ function RatesTab({ canEdit }: { canEdit: boolean }) {
 /* ============ Withdrawals queue ============ */
 function WithdrawalsTab() {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"pending" | "paid" | "rejected">("pending");
+  const [tab, setTab] = useState<"pending" | "processing" | "rejected">("pending");
   const { data: list = [] } = useQuery({
     queryKey: ["aff-admin-withdrawals", tab],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("withdrawal_requests").select("*").eq("status", tab).order("created_at", { ascending: false });
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>(`/api/admin/affiliate-withdrawals?status=${tab}`);
+      return res.data ?? [];
     },
   });
 
-  // Triggers actual M-Pesa / Africa's Talking payout via Spring Boot backend.
-  // The backend fetches its own service_role key — no privileged key sent from browser.
   const approve = useMutation({
-    mutationFn: async (id: string) => {
-      const token = getToken();
-      if (!token) throw new Error("Not authenticated");
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/withdrawals/${id}/process`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        throw new Error(body.error ?? "Payout failed");
-      }
-    },
-    onSuccess: () => { toast.success("Payout triggered — marking as processing"); qc.invalidateQueries({ queryKey: ["aff-admin-withdrawals"] }); },
+    mutationFn: (id: string) => api.post(`/api/admin/affiliate-withdrawals/${id}/approve`, {}),
+    onSuccess: () => { toast.success("Marked as processing"); qc.invalidateQueries({ queryKey: ["aff-admin-withdrawals"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const reject = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      const { error } = await (supabase as any).rpc("affiliate_reject_withdrawal", { _id: id, _reason: reason });
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Rejected"); qc.invalidateQueries({ queryKey: ["aff-admin-withdrawals"] }); },
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api.post(`/api/admin/affiliate-withdrawals/${id}/reject`, { reason }),
+    onSuccess: () => { toast.success("Rejected — points refunded"); qc.invalidateQueries({ queryKey: ["aff-admin-withdrawals"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -378,7 +339,7 @@ function WithdrawalsTab() {
     <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
       <TabsList className="grid grid-cols-3 max-w-md">
         <TabsTrigger value="pending">Pending</TabsTrigger>
-        <TabsTrigger value="paid">Paid</TabsTrigger>
+        <TabsTrigger value="processing">Processing</TabsTrigger>
         <TabsTrigger value="rejected">Rejected</TabsTrigger>
       </TabsList>
       <TabsContent value={tab} className="mt-4 space-y-3">
@@ -406,7 +367,7 @@ function WithdrawalRow({ w, onApprove, onReject, busy, canAct }: { w: any; onApp
         <div>
           <div className="font-semibold capitalize">{w.method} • {w.amount_points} pts → {valueLabel}</div>
           <div className="text-xs text-muted-foreground font-mono break-all">user: {w.user_id}</div>
-          {w.destination && <div className="text-xs text-muted-foreground">to: {w.destination}</div>}
+          {w.phone && <div className="text-xs text-muted-foreground">to: {w.phone}</div>}
           <div className="text-xs text-muted-foreground">{new Date(w.created_at).toLocaleString()}</div>
         </div>
         <Badge variant="outline" className="capitalize">{w.status}</Badge>
@@ -416,9 +377,8 @@ function WithdrawalRow({ w, onApprove, onReject, busy, canAct }: { w: any; onApp
           <div>
             <Button size="sm" disabled={busy} onClick={onApprove} className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
               {busy ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <CheckCircle2 className="size-4 mr-1.5" />}
-              Trigger payout
+              Mark as processing
             </Button>
-            <p className="text-xs text-muted-foreground mt-1.5">Sends M-Pesa / airtime automatically.</p>
           </div>
           <div className="space-y-2">
             <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Rejection reason" className="glass" />
@@ -429,66 +389,7 @@ function WithdrawalRow({ w, onApprove, onReject, busy, canAct }: { w: any; onApp
         </div>
       )}
       {w.payout_ref && <div className="mt-2 text-xs text-muted-foreground">ref: <span className="font-mono">{w.payout_ref}</span></div>}
-      {w.reviewer_notes && <div className="mt-2 text-xs text-muted-foreground">notes: {w.reviewer_notes}</div>}
-    </div>
-  );
-}
-
-/* ============ Config (rules + treasury) ============ */
-function ConfigTab({ canEdit }: { canEdit: boolean }) {
-  const qc = useQueryClient();
-  const { data: rules } = useQuery({
-    queryKey: ["aff-admin-wrules"],
-    queryFn: async () => (await (supabase as any).from("withdrawal_rules").select("*").eq("id", 1).maybeSingle()).data,
-  });
-  const { data: treasury } = useQuery({
-    queryKey: ["aff-admin-treasury"],
-    queryFn: async () => (await (supabase as any).from("admin_treasury").select("*").eq("id", 1).maybeSingle()).data,
-  });
-
-  const [r, setR] = useState<any>(rules ?? null);
-  const [t, setT] = useState<any>(treasury ?? null);
-  if (rules && !r) setR(rules);
-  if (treasury && !t) setT(treasury);
-
-  const saveRules = useMutation({
-    mutationFn: async () => {
-      const { error } = await (supabase as any).from("withdrawal_rules").update({
-        min_points: r.min_points, daily_limit_points: r.daily_limit_points,
-        auto_approve: r.auto_approve, cooldown_minutes: r.cooldown_minutes,
-      }).eq("id", 1);
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Rules saved"); qc.invalidateQueries({ queryKey: ["aff-admin-wrules"] }); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-  const saveTreasury = useMutation({
-    mutationFn: async () => {
-      const { error } = await (supabase as any).from("admin_treasury").update({ balance_cash_cents: t.balance_cash_cents }).eq("id", 1);
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Treasury updated"); qc.invalidateQueries({ queryKey: ["aff-admin-treasury"] }); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  if (!r || !t) return <Sk />;
-  return (
-    <div className="grid lg:grid-cols-2 gap-5">
-      <div className="glass rounded-2xl p-5 space-y-3">
-        <h3 className="font-semibold">Withdrawal rules</h3>
-        <Field label="Minimum points" value={r.min_points} onChange={(v) => setR({ ...r, min_points: +v })} disabled={!canEdit} />
-        <Field label="Daily limit (pts)" value={r.daily_limit_points} onChange={(v) => setR({ ...r, daily_limit_points: +v })} disabled={!canEdit} />
-        <Field label="Cooldown (min)" value={r.cooldown_minutes} onChange={(v) => setR({ ...r, cooldown_minutes: +v })} disabled={!canEdit} />
-        <label className="flex items-center gap-2 text-sm">Auto-approve <Switch checked={r.auto_approve} onCheckedChange={(v) => setR({ ...r, auto_approve: v })} disabled={!canEdit} /></label>
-        {canEdit && <Button onClick={() => saveRules.mutate()} disabled={saveRules.isPending}><Save className="size-4 mr-1.5" />Save rules</Button>}
-      </div>
-      <div className="glass rounded-2xl p-5 space-y-3">
-        <h3 className="font-semibold">Treasury (cash float)</h3>
-        <div className="text-sm text-muted-foreground">Current balance: <span className="font-mono text-foreground">KES {(t.balance_cash_cents / 100).toFixed(2)}</span></div>
-        <Field label="Balance (cents)" value={t.balance_cash_cents} onChange={(v) => setT({ ...t, balance_cash_cents: +v })} disabled={!canEdit} />
-        <p className="text-xs text-muted-foreground">M-Pesa B2C is not yet wired — set this manually to reflect your funded float. Approving an M-Pesa withdrawal debits this balance and records the payout reference.</p>
-        {canEdit && <Button onClick={() => saveTreasury.mutate()} disabled={saveTreasury.isPending}><Save className="size-4 mr-1.5" />Save treasury</Button>}
-      </div>
+      {w.notes && <div className="mt-2 text-xs text-muted-foreground">notes: {w.notes}</div>}
     </div>
   );
 }
@@ -498,9 +399,8 @@ function LeaderboardTab() {
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["aff-admin-board"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("affiliate_leaderboard_weekly");
-      if (error) throw error;
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>("/api/admin/affiliate-leaderboard");
+      return res.data ?? [];
     },
   });
   if (isLoading) return <Sk />;
@@ -513,7 +413,7 @@ function LeaderboardTab() {
       {rows.length === 0 ? <Empty msg="No activity in the last 7 days." /> : (
         <table className="w-full text-sm">
           <thead className="bg-muted/30 text-xs text-muted-foreground">
-            <tr><th className="px-4 py-2 text-left">#</th><th className="px-4 py-2 text-left">User</th><th className="px-4 py-2 text-right">Clicks</th><th className="px-4 py-2 text-right">Signups</th><th className="px-4 py-2 text-right">Purchases</th><th className="px-4 py-2 text-right">Points</th><th className="px-4 py-2 text-right">Revenue</th></tr>
+            <tr><th className="px-4 py-2 text-left">#</th><th className="px-4 py-2 text-left">User</th><th className="px-4 py-2 text-right">Clicks</th><th className="px-4 py-2 text-right">Signups</th><th className="px-4 py-2 text-right">Purchases</th><th className="px-4 py-2 text-right">Points</th></tr>
           </thead>
           <tbody>
             {rows.map((r: any, i: number) => (
@@ -524,7 +424,6 @@ function LeaderboardTab() {
                 <td className="px-4 py-2 text-right">{r.signups}</td>
                 <td className="px-4 py-2 text-right">{r.purchases}</td>
                 <td className="px-4 py-2 text-right font-mono font-semibold">{r.points}</td>
-                <td className="px-4 py-2 text-right">KES {(r.revenue_cents / 100).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
@@ -544,61 +443,44 @@ const ASSET_KINDS = ["poster","logo","video","sms_template","whatsapp_template",
 function AssetsTab({ canEdit }: { canEdit: boolean }) {
   const qc = useQueryClient();
   const [productSlug, setProductSlug] = useState<string>(products[0].slug);
-  const [form, setForm] = useState<{ kind: string; title: string; body_text: string; notes: string; file: File | null; file_url: string }>({
-    kind: "poster", title: "", body_text: "", notes: "", file: null, file_url: "",
+  const [form, setForm] = useState<{ kind: string; title: string; body_text: string; notes: string; file_url: string }>({
+    kind: "poster", title: "", body_text: "", notes: "", file_url: "",
   });
-  const [uploading, setUploading] = useState(false);
 
   const list = useQuery({
     queryKey: ["admin-assets", productSlug],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("product_assets")
-        .select("*").eq("product_slug", productSlug).order("created_at", { ascending: false });
-      return data ?? [];
+      const res = await api.get<{ data: any[] }>(`/api/admin/affiliate-assets?product_slug=${productSlug}`);
+      return res.data ?? [];
     },
   });
 
   const create = useMutation({
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Title required");
-      let file_url = form.file_url || null;
-      if (form.file) {
-        setUploading(true);
-        const ext = form.file.name.split(".").pop();
-        const path = `${productSlug}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-        const { error: upErr } = await (supabase as any).storage.from("affiliate-assets").upload(path, form.file, { upsert: false });
-        setUploading(false);
-        if (upErr) throw upErr;
-        const { data: pub } = (supabase as any).storage.from("affiliate-assets").getPublicUrl(path);
-        file_url = pub.publicUrl;
-      }
-      const { error } = await (supabase as any).from("product_assets").insert({
+      await api.post("/api/admin/affiliate-assets", {
         product_slug: productSlug, kind: form.kind, title: form.title,
-        body_text: form.body_text || null, notes: form.notes || null, file_url, active: true,
+        body_text: form.body_text || null, notes: form.notes || null,
+        file_url: form.file_url || null, active: true,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Asset added");
-      setForm({ kind: "poster", title: "", body_text: "", notes: "", file: null, file_url: "" });
+      setForm({ kind: "poster", title: "", body_text: "", notes: "", file_url: "" });
       qc.invalidateQueries({ queryKey: ["admin-assets", productSlug] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const toggleActive = useMutation({
-    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await (supabase as any).from("product_assets").update({ active }).eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
+      api.patch(`/api/admin/affiliate-assets/${id}`, { active }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-assets", productSlug] }),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const del = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("product_assets").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => api.delete(`/api/admin/affiliate-assets/${id}`),
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-assets", productSlug] }); },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -634,17 +516,12 @@ function AssetsTab({ canEdit }: { canEdit: boolean }) {
           <label className="space-y-1 block"><span className="text-xs text-muted-foreground">Body text (for SMS / captions / scripts)</span>
             <Textarea value={form.body_text} onChange={(e) => setForm({ ...form, body_text: e.target.value })} className="glass" rows={3} />
           </label>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <label className="space-y-1 block"><span className="text-xs text-muted-foreground">Upload file (image/video/pdf)</span>
-              <Input type="file" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] ?? null })} className="glass" accept="image/*,video/*,.pdf" />
-            </label>
-            <label className="space-y-1 block"><span className="text-xs text-muted-foreground">…or paste a public URL</span>
-              <Input value={form.file_url} onChange={(e) => setForm({ ...form, file_url: e.target.value })} className="glass" placeholder="https://…" />
-            </label>
-          </div>
+          <label className="space-y-1 block"><span className="text-xs text-muted-foreground">File URL (public link to image/video/PDF)</span>
+            <Input value={form.file_url} onChange={(e) => setForm({ ...form, file_url: e.target.value })} className="glass" placeholder="https://…" />
+          </label>
           <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="glass" placeholder="Usage notes (optional)" />
-          <Button onClick={() => create.mutate()} disabled={create.isPending || uploading} className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
-            {create.isPending || uploading ? <Loader2 className="size-4 animate-spin" /> : <><Upload className="size-4 mr-1.5" /> Add asset</>}
+          <Button onClick={() => create.mutate()} disabled={create.isPending} className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
+            {create.isPending ? <Loader2 className="size-4 animate-spin" /> : "Add asset"}
           </Button>
         </div>
       )}
@@ -653,11 +530,12 @@ function AssetsTab({ canEdit }: { canEdit: boolean }) {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {list.data!.map((a: any) => (
             <div key={a.id} className="glass rounded-xl overflow-hidden border border-border/50">
-              {a.kind === "poster" || a.kind === "logo" ? (
-                a.file_url && <img src={a.file_url} alt={a.title} className="w-full h-32 object-cover" loading="lazy" />
-              ) : a.kind === "video" ? (
-                a.file_url && <video src={a.file_url} className="w-full h-32 object-cover" />
-              ) : null}
+              {(a.kind === "poster" || a.kind === "logo") && a.file_url && (
+                <img src={a.file_url} alt={a.title} className="w-full h-32 object-cover" loading="lazy" />
+              )}
+              {a.kind === "video" && a.file_url && (
+                <video src={a.file_url} className="w-full h-32 object-cover" />
+              )}
               <div className="p-3 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -694,19 +572,17 @@ function TemplatesTab({ canEdit }: { canEdit: boolean }) {
   const list = useQuery({
     queryKey: ["admin-templates", productSlug],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("share_templates")
-        .select("*").eq("product_slug", productSlug);
-      return (data ?? []) as Array<{ id?: string; channel: string; body: string; cta: string | null; active: boolean }>;
+      const res = await api.get<{ data: any[] }>(`/api/admin/affiliate-templates?product_slug=${productSlug}`);
+      return (res.data ?? []) as Array<{ id?: string; channel: string; body: string; cta: string | null; active: boolean }>;
     },
   });
 
   const upsert = useMutation({
     mutationFn: async (row: { channel: string; body: string; cta: string; active: boolean }) => {
-      const { error } = await (supabase as any).from("share_templates").upsert({
+      await api.put("/api/admin/affiliate-templates", {
         product_slug: productSlug, channel: row.channel, body: row.body,
         cta: row.cta || null, active: row.active,
-      }, { onConflict: "product_slug,channel" });
-      if (error) throw error;
+      });
     },
     onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["admin-templates", productSlug] }); },
     onError: (e: Error) => toast.error(e.message),
@@ -764,4 +640,3 @@ function TemplateRow({ channel, current, canEdit, onSave, busy }: {
     </div>
   );
 }
-
