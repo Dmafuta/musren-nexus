@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { KeyRound, Webhook, Code2, BookOpen, Plus, Trash2, Copy, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { getToken } from "@/lib/api-client";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { Button } from "@/components/ui/button";
@@ -61,9 +61,8 @@ interface WebhookEndpoint {
   active: boolean;
 }
 
-async function getAuthHeader(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+function getAuthHeader(): Record<string, string> {
+  const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -153,7 +152,7 @@ function ApiKeysTab() {
   const keysQuery = useQuery<ApiKey[]>({
     queryKey: ["dev-api-keys"],
     queryFn: async () => {
-      const headers = await getAuthHeader();
+      const headers = getAuthHeader();
       const res = await fetch(`${API_URL}/api/developer/keys`, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
@@ -162,7 +161,7 @@ function ApiKeysTab() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const headers = { ...(await getAuthHeader()), "Content-Type": "application/json" };
+      const headers = { ...(getAuthHeader()), "Content-Type": "application/json" };
       const res = await fetch(`${API_URL}/api/developer/keys`, {
         method: "POST",
         headers,
@@ -183,7 +182,7 @@ function ApiKeysTab() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const headers = await getAuthHeader();
+      const headers = getAuthHeader();
       const res = await fetch(`${API_URL}/api/developer/keys/${id}`, { method: "DELETE", headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     },
@@ -308,7 +307,7 @@ function WebhooksTab() {
   const hooksQuery = useQuery<WebhookEndpoint[]>({
     queryKey: ["dev-webhooks"],
     queryFn: async () => {
-      const headers = await getAuthHeader();
+      const headers = getAuthHeader();
       const res = await fetch(`${API_URL}/api/developer/webhooks`, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
@@ -317,7 +316,7 @@ function WebhooksTab() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const headers = { ...(await getAuthHeader()), "Content-Type": "application/json" };
+      const headers = { ...(getAuthHeader()), "Content-Type": "application/json" };
       const res = await fetch(`${API_URL}/api/developer/webhooks`, {
         method: "POST",
         headers,
@@ -338,7 +337,7 @@ function WebhooksTab() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const headers = await getAuthHeader();
+      const headers = getAuthHeader();
       const res = await fetch(`${API_URL}/api/developer/webhooks/${id}`, { method: "DELETE", headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     },

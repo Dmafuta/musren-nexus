@@ -1,15 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { z } from "zod";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Zap, Eye, EyeOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/reset-password")({
+  validateSearch: (s: any) => ({
+    token: typeof s.token === "string" ? s.token : "",
+    email: typeof s.email === "string" ? s.email : "",
+  }),
   head: () => ({
     meta: [
       { title: "Reset password — Musren" },
@@ -19,38 +23,24 @@ export const Route = createFileRoute("/reset-password")({
   component: ResetPasswordPage,
 });
 
-const schema = z.object({
-  password: z.string().min(8, "Password must be at least 8 characters").max(72),
-  confirmPassword: z.string().min(8).max(72),
-}).refine((d) => d.password === d.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const schema = z
+  .object({
+    password: z.string().min(8, "Password must be at least 8 characters").max(72),
+    confirmPassword: z.string().min(8).max(72),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
+  const { token, email } = Route.useSearch();
   const [busy, setBusy] = useState(false);
-  const [ready, setReady] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  useEffect(() => {
-    // Supabase parses the recovery token from the URL hash and emits
-    // PASSWORD_RECOVERY when ready. We allow the page if a session exists
-    // (recovery already exchanged) or wait briefly for the event.
-    let mounted = true;
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (!mounted) return;
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted && data.session) setReady(true);
-    });
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
+  const ready = !!(token && email);
 
   const handle = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -64,14 +54,12 @@ function ResetPasswordPage() {
     }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-      toast.success("Password updated. You're signed in.");
+      await api.post("/api/auth/reset-password", { email, token, password, password_confirmation: password });
+      toast.success("Password updated. Please sign in.");
       navigate({ to: "/login" });
     } catch (err) {
-      console.error("[auth] password update error:", err);
       const msg = (err as Error).message?.toLowerCase() ?? "";
-      if (msg.includes("session") || msg.includes("expired") || msg.includes("invalid")) {
+      if (msg.includes("expired") || msg.includes("invalid")) {
         toast.error("Reset link expired or invalid. Please request a new one.");
       } else {
         toast.error("Could not update password. Please try again.");
@@ -101,22 +89,26 @@ function ResetPasswordPage() {
           {!ready ? (
             <div className="space-y-4 text-center">
               <p className="text-sm text-muted-foreground">
-                Validating your reset link…
+                Invalid or missing reset link.
               </p>
-              <p className="text-xs text-muted-foreground">
-                If nothing happens, the link may have expired.{" "}
-                <Link to="/forgot-password" className="underline hover:text-foreground">
-                  Request a new one
-                </Link>
-                .
-              </p>
+              <Button asChild variant="outline" className="w-full glass">
+                <Link to="/forgot-password">Request a new link</Link>
+              </Button>
             </div>
           ) : (
             <form onSubmit={handle} className="space-y-4">
               <div>
                 <Label htmlFor="password">New password</Label>
                 <div className="relative mt-1.5">
-                  <Input id="password" name="password" type={showPwd ? "text" : "password"} required minLength={8} maxLength={72} className="glass pr-10" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPwd ? "text" : "password"}
+                    required
+                    minLength={8}
+                    maxLength={72}
+                    className="glass pr-10"
+                  />
                   <button
                     type="button"
                     onClick={() => setShowPwd((v) => !v)}
@@ -132,7 +124,15 @@ function ResetPasswordPage() {
               <div>
                 <Label htmlFor="confirmPassword">Confirm password</Label>
                 <div className="relative mt-1.5">
-                  <Input id="confirmPassword" name="confirmPassword" type={showConfirm ? "text" : "password"} required minLength={8} maxLength={72} className="glass pr-10" />
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirm ? "text" : "password"}
+                    required
+                    minLength={8}
+                    maxLength={72}
+                    className="glass pr-10"
+                  />
                   <button
                     type="button"
                     onClick={() => setShowConfirm((v) => !v)}

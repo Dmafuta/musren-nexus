@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Zap } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/forgot-password")({
@@ -36,15 +36,11 @@ function ForgotPasswordPage() {
     }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
+      await api.post("/api/auth/forgot-password", { email });
       setSent(true);
-      toast.success("Reset link sent. Check your inbox.");
-    } catch (err) {
-      console.error("[auth] reset request error:", err);
-      // Always show generic success-style message to avoid email enumeration
+      toast.success("If an account exists, a reset link has been sent.");
+    } catch {
+      // Always show generic to avoid email enumeration
       setSent(true);
       toast.success("If an account exists, a reset link has been sent.");
     } finally {
@@ -73,7 +69,7 @@ function ForgotPasswordPage() {
             <div className="space-y-4 text-center">
               <p className="text-sm">
                 If an account exists for that email, a password reset link is on its way.
-                The link expires shortly — check your inbox (and spam folder).
+                The link expires in 60 minutes — check your inbox (and spam folder).
               </p>
               <Button asChild variant="outline" className="w-full glass">
                 <Link to="/login">Back to sign in</Link>

@@ -7,10 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Zap, Eye, EyeOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/hooks/use-auth";
-import { resolvePostAuthRedirect } from "@/lib/onboarding";
+import { dashboardForAccess } from "@/lib/onboarding";
 import { toast } from "sonner";
 
 const searchSchema = z.object({ redirect: z.string().optional() });
@@ -39,7 +37,7 @@ const signupSchema = credSchema.extend({
 });
 
 function LoginPage() {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isAuthenticated, loading, roles, login, register } = useAuth();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -60,88 +58,26 @@ function LoginPage() {
   );
 
   useEffect(() => {
-    if (!loading && isAuthenticated && user) {
-      const routeAfterLogin = async () => {
-        const { target } = await resolvePostAuthRedirect(user);
-        const safeRedirect = search.redirect?.startsWith("/admin") || search.redirect === "/select-role"
-          ? undefined
-          : search.redirect;
-        console.info("[auth] redirect target", safeRedirect ?? target);
-        if (target === "/select-role" || target.startsWith("/admin")) {
-          navigate({ to: target as "/dashboard", replace: true });
-          return;
-        }
-        navigate({ to: (safeRedirect ?? target) as "/dashboard", replace: true });
-      };
-      routeAfterLogin().catch((err) => {
-        console.error("[auth] post-login routing error:", err);
-        navigate({ to: "/select-role", replace: true });
-      });
+    if (!loading && isAuthenticated) {
+      const target = dashboardForAccess(null, roles);
+      const safeRedirect =
+        search.redirect && !search.redirect.startsWith("/admin") && search.redirect !== "/select-role"
+          ? search.redirect
+          : undefined;
+      navigate({ to: (safeRedirect ?? target) as "/dashboard", replace: true });
     }
-  }, [loading, isAuthenticated, navigate, search.redirect, user]);
+  }, [loading, isAuthenticated, navigate, search.redirect, roles]);
 
-  const friendlyEmailError = (raw: string, mode: "signin" | "signup") => {
-    const m = raw.toLowerCase();
-    if (m.includes("invalid login") || m.includes("invalid credentials"))
-      return "Incorrect email or password. Please try again.";
-    if (m.includes("email not confirmed"))
-      return "Please confirm your email address before signing in. Check your inbox for the confirmation link.";
-    if (m.includes("user already registered") || m.includes("already been registered"))
-      return "An account with this email already exists. Try signing in instead.";
-    if (m.includes("weak password") || m.includes("password should"))
-      return "Password is too weak. Use at least 8 characters with a mix of letters and numbers.";
-    if (m.includes("rate limit") || m.includes("too many"))
-      return "Too many attempts. Please wait a moment and try again.";
-    if (m.includes("network") || m.includes("failed to fetch"))
-      return "Network error. Check your connection and try again.";
-    if (m.includes("not allowed") || m.includes("signups not allowed"))
-      return "Sign-ups are currently disabled. Please contact support.";
-    return mode === "signin"
-      ? "Could not sign you in. Please try again."
-      : "Could not create your account. Please try again.";
-  };
-
-  const friendlyOAuthError = (raw: string, provider: string) => {
-    const m = raw.toLowerCase();
-    if (m.includes("popup") || m.includes("closed"))
-      return `${provider} sign-in was cancelled. Please try again.`;
-    if (m.includes("network") || m.includes("failed to fetch"))
-      return `Network error connecting to ${provider}. Check your connection and try again.`;
-    if (m.includes("not enabled") || m.includes("provider"))
-      return `${provider} sign-in isn't available right now. Please use email or another method.`;
-    return `${provider} sign-in failed. Please try again or use email.`;
-  };
-
-  const handleOAuth = async (provider: "google" | "apple") => {
-    const label = provider === "google" ? "Google" : "Apple";
-    setBusy(true);
-    try {
-      const res = await lovable.auth.signInWithOAuth(provider, {
-        redirect_uri: `${window.location.origin}/auth/callback`,
-      });
-      if (res.error) {
-        console.error(`[auth] ${provider} OAuth error:`, res.error);
-        toast.error(friendlyOAuthError(res.error.message ?? "", label));
-      }
-    } catch (err) {
-      console.error(`[auth] ${provider} OAuth exception:`, err);
-      toast.error(friendlyOAuthError((err as Error).message ?? "", label));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handle = async (
-    e: React.FormEvent<HTMLFormElement>,
-    mode: "signin" | "signup",
-  ) => {
+  const handle = async (e: React.FormEvent<HTMLFormElement>, mode: "signin" | "signup") => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const email = String(fd.get("email") ?? "");
     const password = String(fd.get("password") ?? "");
+
     if (mode === "signup") {
       const parsed = signupSchema.safeParse({
-        email, password,
+        email,
+        password,
         confirmPassword: String(fd.get("confirmPassword") ?? ""),
       });
       if (!parsed.success) {
@@ -155,24 +91,28 @@ function LoginPage() {
         return;
       }
     }
+
     setBusy(true);
     try {
       if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await login(email, password);
         toast.success("Signed in successfully");
       } else {
-        const { error } = await supabase.auth.signUp({
-          email, password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-        });
-        if (error) throw error;
-        console.info("[auth] verification email requested", { email });
-        toast.success("Account created. Check your email to confirm.");
+        await register(email, password);
+        toast.success("Account created. Welcome to Musren!");
       }
     } catch (err) {
-      console.error(`[auth] ${mode} error:`, err);
-      toast.error(friendlyEmailError((err as Error).message ?? "", mode));
+      const msg = (err as Error).message ?? "";
+      const m = msg.toLowerCase();
+      if (m.includes("invalid credentials") || m.includes("invalid login")) {
+        toast.error("Incorrect email or password. Please try again.");
+      } else if (m.includes("unique") || m.includes("already")) {
+        toast.error("An account with this email already exists. Try signing in instead.");
+      } else if (m.includes("rate limit") || m.includes("too many")) {
+        toast.error("Too many attempts. Please wait a moment and try again.");
+      } else {
+        toast.error(msg || (mode === "signin" ? "Could not sign you in." : "Could not create your account."));
+      }
     } finally {
       setBusy(false);
     }
@@ -195,34 +135,6 @@ function LoginPage() {
         </div>
 
         <div className="rounded-2xl glass-strong p-6 border-gradient">
-          <div className="space-y-2.5 mb-6">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy}
-              className="w-full glass"
-              onClick={() => handleOAuth("google")}
-            >
-              <svg className="size-4" viewBox="0 0 24 24" aria-hidden><path fill="#EA4335" d="M12 11v3.2h4.5c-.2 1.2-1.4 3.5-4.5 3.5-2.7 0-4.9-2.2-4.9-5s2.2-5 4.9-5c1.5 0 2.6.7 3.2 1.2l2.2-2.1C15.9 5.5 14.1 4.7 12 4.7 7.9 4.7 4.6 8 4.6 12s3.3 7.3 7.4 7.3c4.3 0 7.1-3 7.1-7.2 0-.5-.1-.9-.1-1.1H12z"/></svg>
-              Continue with Google
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy}
-              className="w-full glass"
-              onClick={() => handleOAuth("apple")}
-            >
-              <svg className="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.9-1.5-.1-2.8.9-3.6.9-.7 0-1.9-.8-3.1-.8-1.6 0-3.1.9-3.9 2.4-1.7 2.9-.4 7.2 1.2 9.6.8 1.2 1.7 2.5 3 2.5 1.2 0 1.7-.8 3.1-.8s1.9.8 3.1.8 2.2-1.2 3-2.4c.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.7-1-2.7-4zM14.2 5.5c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1.1.1 2.1-.5 2.7-1.3z"/></svg>
-              Continue with Apple
-            </Button>
-          </div>
-
-          <div className="relative my-4 text-center text-xs text-muted-foreground">
-            <span className="bg-background px-2 relative z-10">or with email</span>
-            <div className="absolute inset-x-0 top-1/2 h-px bg-border -z-0" />
-          </div>
-
           <Tabs defaultValue="signin">
             <TabsList className="grid grid-cols-2 w-full">
               <TabsTrigger value="signin">Sign in</TabsTrigger>
@@ -243,7 +155,15 @@ function LoginPage() {
                     </Link>
                   </div>
                   <div className="relative mt-1.5">
-                    <Input id="password" name="password" type={showSigninPwd ? "text" : "password"} required minLength={8} maxLength={72} className="glass pr-10" />
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showSigninPwd ? "text" : "password"}
+                      required
+                      minLength={8}
+                      maxLength={72}
+                      className="glass pr-10"
+                    />
                     <PwdToggle show={showSigninPwd} onToggle={() => setShowSigninPwd((v) => !v)} />
                   </div>
                 </div>
@@ -266,7 +186,15 @@ function LoginPage() {
                 <div>
                   <Label htmlFor="password2">Password</Label>
                   <div className="relative mt-1.5">
-                    <Input id="password2" name="password" type={showSignupPwd ? "text" : "password"} required minLength={8} maxLength={72} className="glass pr-10" />
+                    <Input
+                      id="password2"
+                      name="password"
+                      type={showSignupPwd ? "text" : "password"}
+                      required
+                      minLength={8}
+                      maxLength={72}
+                      className="glass pr-10"
+                    />
                     <PwdToggle show={showSignupPwd} onToggle={() => setShowSignupPwd((v) => !v)} />
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">At least 8 characters.</p>
@@ -274,7 +202,15 @@ function LoginPage() {
                 <div>
                   <Label htmlFor="confirmPassword">Confirm password</Label>
                   <div className="relative mt-1.5">
-                    <Input id="confirmPassword" name="confirmPassword" type={showConfirmPwd ? "text" : "password"} required minLength={8} maxLength={72} className="glass pr-10" />
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPwd ? "text" : "password"}
+                      required
+                      minLength={8}
+                      maxLength={72}
+                      className="glass pr-10"
+                    />
                     <PwdToggle show={showConfirmPwd} onToggle={() => setShowConfirmPwd((v) => !v)} />
                   </div>
                 </div>

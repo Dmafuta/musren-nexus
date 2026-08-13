@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ShieldAlert, Crown, ShieldCheck } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth, type AppRole } from "@/hooks/use-auth";
 import { AdminShell as SiteLayout } from "@/components/layouts/AdminShell";
 import { Section } from "@/components/site/Section";
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/admin/users")({
   component: UsersPage,
 });
 
-interface UserRow { user_id: string; email: string | null; roles: AppRole[] }
+interface UserRow { user_id: string; email: string | null; name: string | null; roles: AppRole[] }
 
 function UsersPage() {
   const { hasRole, hasAnyRole, user, loading, refreshRoles } = useAuth();
@@ -26,14 +26,10 @@ function UsersPage() {
   const isAdmin = hasAnyRole(["admin", "superadmin"]);
 
   const claim = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.rpc("claim_first_superadmin");
-      if (error) throw error;
-      return data as boolean;
-    },
-    onSuccess: async (claimed) => {
-      if (claimed) { toast.success("You are now the Super Admin"); await refreshRoles(); }
-      else toast.info("A super admin already exists.");
+    mutationFn: () => api.post<{ claimed: boolean; message: string }>("/api/auth/bootstrap/claim-superadmin"),
+    onSuccess: async (res) => {
+      if (res.claimed) { toast.success(res.message); await refreshRoles(); }
+      else toast.info(res.message);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -43,9 +39,17 @@ function UsersPage() {
   if (!isAdmin) {
     return (
       <SiteLayout>
-        <Section eyebrow="Admin" title="Admin access required" description="Sign in with an admin account, or claim the first super admin if none exists yet.">
+        <Section
+          eyebrow="Admin"
+          title="Admin access required"
+          description="Sign in with an admin account, or claim the first super admin if none exists yet."
+        >
           <div className="flex gap-2 flex-wrap">
-            {user && <Button onClick={() => claim.mutate()} disabled={claim.isPending}>Claim first Super Admin</Button>}
+            {user && (
+              <Button onClick={() => claim.mutate()} disabled={claim.isPending}>
+                Claim first Super Admin
+              </Button>
+            )}
             <Link to="/"><Button variant="outline" className="glass">Back home</Button></Link>
           </div>
         </Section>
@@ -58,28 +62,25 @@ function UsersPage() {
 
 function UsersContent({ isSuper }: { isSuper: boolean }) {
   const qc = useQueryClient();
+
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users-with-roles"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("list_users_with_roles");
-      if (error) throw error;
-      return (data ?? []) as UserRow[];
+      const res = await api.get<{ data: UserRow[] }>("/api/admin/users");
+      return res.data ?? [];
     },
   });
 
   const grant = useMutation({
-    mutationFn: async (v: { userId: string; role: AppRole }) => {
-      const { error } = await supabase.rpc("grant_role", { _user_id: v.userId, _role: v.role });
-      if (error) throw error;
-    },
+    mutationFn: (v: { userId: string; role: AppRole }) =>
+      api.post(`/api/admin/users/${v.userId}/roles`, { role: v.role }),
     onSuccess: () => { toast.success("Role granted"); qc.invalidateQueries({ queryKey: ["users-with-roles"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+
   const revoke = useMutation({
-    mutationFn: async (v: { userId: string; role: AppRole }) => {
-      const { error } = await supabase.rpc("revoke_role", { _user_id: v.userId, _role: v.role });
-      if (error) throw error;
-    },
+    mutationFn: (v: { userId: string; role: AppRole }) =>
+      api.delete(`/api/admin/users/${v.userId}/roles/${v.role}`),
     onSuccess: () => { toast.success("Role revoked"); qc.invalidateQueries({ queryKey: ["users-with-roles"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -94,9 +95,11 @@ function UsersContent({ isSuper }: { isSuper: boolean }) {
       <Section
         eyebrow={isSuper ? "Super Admin" : "Admin"}
         title="Users & roles"
-        description={isSuper
-          ? "Toggle Admin and Super Admin access for any user."
-          : "Read-only view. Only Super Admins can grant or revoke Admin and Super Admin roles."}
+        description={
+          isSuper
+            ? "Toggle Admin and Super Admin access for any user."
+            : "Read-only view. Only Super Admins can grant or revoke Admin and Super Admin roles."
+        }
       >
         <div className="mb-6">
           <Link to="/admin/corporate-topup" className="text-sm text-muted-foreground inline-flex items-center gap-1.5 hover:text-foreground">
@@ -116,16 +119,17 @@ function UsersContent({ isSuper }: { isSuper: boolean }) {
         {isLoading ? (
           <div className="text-muted-foreground">Loading users…</div>
         ) : users.length === 0 ? (
-          <div className="glass rounded-2xl p-8 text-center text-muted-foreground">No users with roles yet.</div>
+          <div className="glass rounded-2xl p-8 text-center text-muted-foreground">No users yet.</div>
         ) : (
           <div className="space-y-3">
             {users.map((u) => {
-              const isAdmin = u.roles.includes("admin");
+              const isAdminRow = u.roles.includes("admin");
               const isSuperRow = u.roles.includes("superadmin");
               return (
                 <div key={u.user_id} className="glass rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
                   <div className="min-w-0">
                     <div className="font-medium truncate">{u.email ?? "(no email)"}</div>
+                    {u.name && <div className="text-xs text-muted-foreground">{u.name}</div>}
                     <div className="text-xs text-muted-foreground font-mono break-all">{u.user_id}</div>
                     <div className="mt-2 flex gap-1.5 flex-wrap">
                       {u.roles.map((r) => (
@@ -138,7 +142,7 @@ function UsersContent({ isSuper }: { isSuper: boolean }) {
                       <ShieldCheck className="size-4 text-primary" />
                       <span>Admin</span>
                       <Switch
-                        checked={isAdmin}
+                        checked={isAdminRow}
                         disabled={!isSuper || grant.isPending || revoke.isPending}
                         onCheckedChange={(v) => toggle(u, "admin", v)}
                       />

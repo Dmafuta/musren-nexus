@@ -63,6 +63,11 @@ return [
         'sender_id' => env('AT_SENDER_ID', 'MUSREN'),
     ],
 
+    // ─── JWT (our own tokens) ─────────────────────────────────────────────────
+    'jwt' => [
+        'secret' => env('JWT_SECRET'),
+    ],
+
     // ─── App-level ────────────────────────────────────────────────────────────
     'app_config' => [
         'admin_email'   => env('ADMIN_EMAIL'),

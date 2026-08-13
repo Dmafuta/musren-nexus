@@ -1,5 +1,5 @@
-import type { User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { api, setToken } from "@/lib/api-client";
+import type { AuthUser, AppRole } from "@/hooks/use-auth";
 
 export type ProfileRole = "customer" | "affiliate" | "merchant" | "developer";
 
@@ -40,58 +40,57 @@ export const dashboardForAccess = (profile?: UserProfile | null, roles: string[]
   return dashboardForRole(profile?.role);
 };
 
-export async function getUserRoles(userId: string) {
-  const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  if (error) throw error;
-  return (data ?? []).map((row) => row.role as string);
+export function isRoleAssigned(roles: AppRole[]): boolean {
+  return roles.some((r) => ["customer", "affiliate", "merchant", "developer"].includes(r));
 }
 
-export async function fetchUserProfile(userId: string) {
-  const { data, error } = await (supabase as any)
-    .from("profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) throw error;
-  return (data ?? null) as UserProfile | null;
+export function isOnboardingComplete(profile: UserProfile | null): boolean {
+  return profile?.onboarding_completed ?? false;
 }
 
-export async function ensureUserProfile(user: User) {
-  const { data, error } = await (supabase as any).rpc("ensure_user_profile", {
-    _email: user.email ?? "",
-  });
-
-  if (error) throw error;
-  return data as UserProfile;
-}
-
-export async function completeUserOnboarding(user: User, role: ProfileRole) {
-  const { data, error } = await (supabase as any).rpc("complete_onboarding", {
-    _role: role,
-    _email: user.email ?? "",
-  });
-
-  if (error) throw error;
-  return data as UserProfile;
-}
-
-export const isRoleAssigned = (profile?: UserProfile | null) => !!profile?.role;
-
-export const isOnboardingComplete = isRoleAssigned;
-
-export async function resolvePostAuthRedirect(user: User) {
-  console.info("[auth] session created", { userId: user.id, email: user.email });
-
-  const roles = await getUserRoles(user.id);
+export async function resolvePostAuthRedirect(user: AuthUser, roles: AppRole[]) {
   const privilegedTarget = dashboardForAccess(null, roles);
   if (privilegedTarget.startsWith("/admin")) {
-    console.info("[auth] role detected", { roles, redirectTarget: privilegedTarget });
     return { profile: null, roles, target: privilegedTarget };
   }
 
-  const profile = await ensureUserProfile(user);
-  const target = isRoleAssigned(profile) ? dashboardForRole(profile.role) : "/select-role";
-  console.info("[auth] role detected", { role: profile?.role ?? null, roles, redirectTarget: target });
-  return { profile, roles, target };
+  if (isRoleAssigned(roles)) {
+    const target = dashboardForAccess(null, roles);
+    return { profile: null, roles, target };
+  }
+
+  return { profile: null, roles, target: "/select-role" };
+}
+
+export async function completeUserOnboarding(
+  user: AuthUser,
+  role: ProfileRole,
+): Promise<UserProfile> {
+  const res = await api.post<{ token: string }>("/api/roles/select", { role });
+  if (res.token) setToken(res.token);
+  return {
+    id: user.id,
+    user_id: user.id,
+    email: user.email,
+    role,
+    role_selected: true,
+    auth_verified: true,
+    onboarding_completed: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+// Legacy compat — kept so existing callers don't break
+export async function fetchUserProfile(_userId: string): Promise<UserProfile | null> {
+  return null;
+}
+
+export async function getUserRoles(_userId: string): Promise<string[]> {
+  try {
+    const data = await api.get<{ roles: string[] }>("/api/auth/me");
+    return data.roles ?? [];
+  } catch {
+    return [];
+  }
 }

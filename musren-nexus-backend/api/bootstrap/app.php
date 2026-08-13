@@ -20,9 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'supabase.jwt' => \App\Http\Middleware\SupabaseJwt::class,
-            'apikey.auth'  => \App\Http\Middleware\ApiKeyAuth::class,
-            'require.role' => \App\Http\Middleware\RequireRole::class,
+            'jwt.auth'    => \App\Http\Middleware\JwtAuth::class,
+            'role'        => \App\Http\Middleware\RoleGuard::class,
+            'apikey.auth' => \App\Http\Middleware\ApiKeyAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

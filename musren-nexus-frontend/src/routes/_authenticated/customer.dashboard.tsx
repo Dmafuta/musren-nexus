@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
+import { api, getToken } from "@/lib/api-client";
 import { toast } from "sonner";
 
 const API_URL = import.meta.env.VITE_API_URL as string;
@@ -31,54 +31,36 @@ function CustomerDashboard() {
   const walletQuery = useQuery({
     queryKey: ["customer-wallet", userId],
     enabled: !!userId,
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("affiliate_wallets")
-        .select("balance_points, pending_points, lifetime_points, balance_cash_cents")
-        .eq("user_id", userId)
-        .maybeSingle();
-      return data as { balance_points: number; pending_points: number; lifetime_points: number; balance_cash_cents: number } | null;
-    },
+    queryFn: () =>
+      api.get<{ balance_points: number; pending_points: number; lifetime_points: number; balance_cash_cents: number } | null>(
+        "/api/customer/wallet"
+      ),
   });
 
   const ledgerQuery = useQuery({
     queryKey: ["customer-ledger", userId],
     enabled: !!userId,
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("wallet_ledger")
-        .select("id, amount_cents, kind, description, created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(8);
-      return (data ?? []) as Array<{ id: string; amount_cents: number; kind: string; description: string | null; created_at: string }>;
-    },
+    queryFn: () =>
+      api.get<Array<{ id: string; amount_cents: number; kind: string; description: string | null; created_at: string }>>(
+        "/api/customer/ledger"
+      ),
   });
 
   const withdrawalsQuery = useQuery({
     queryKey: ["customer-withdrawals", userId],
     enabled: !!userId,
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("withdrawal_requests")
-        .select("id, method, amount_points, amount_value, status, created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      return (data ?? []) as Array<{ id: string; method: string; amount_points: number; amount_value: number; status: string; created_at: string }>;
-    },
+    queryFn: () =>
+      api.get<Array<{ id: string; method: string; amount_points: number; amount_value: number; status: string; created_at: string }>>(
+        "/api/customer/withdrawals"
+      ),
   });
 
   const ratesQuery = useQuery({
     queryKey: ["customer-rates"],
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("loyalty_exchange_rates")
-        .select("kind, points, value_amount, label")
-        .eq("active", true)
-        .order("kind");
-      return (data ?? []) as Array<{ kind: string; points: number; value_amount: number; label: string | null }>;
-    },
+    queryFn: () =>
+      api.get<Array<{ kind: string; points: number; value_amount: number; label: string | null }>>(
+        "/api/exchange-rates"
+      ),
   });
 
   const w = walletQuery.data;
@@ -243,8 +225,7 @@ function TopUpCard({ userId }: { userId: string }) {
       }
       if (!amountKes || amountKes < 10) throw new Error("Minimum top-up is KES 10");
 
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess?.session?.access_token;
+      const token = getToken();
       if (!token) throw new Error("Not authenticated");
 
       const res = await fetch(`${API_URL}/api/payments/topup`, {

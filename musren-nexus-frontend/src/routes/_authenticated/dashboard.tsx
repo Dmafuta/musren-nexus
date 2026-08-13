@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BriefcaseBusiness, HandCoins, Loader2, ShieldCheck, ShoppingBag, UsersRound } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, HandCoins, Loader2, ShieldCheck, UsersRound } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,11 +15,10 @@ import {
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
+import { dashboardForAccess, isRoleAssigned } from "@/lib/onboarding";
 import { toast } from "sonner";
-import { dashboardForAccess, fetchUserProfile, isOnboardingComplete, roleLabels, type UserProfile } from "@/lib/onboarding";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -34,65 +33,48 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function DashboardPage() {
   const { user, roles, loading, refreshRoles } = useAuth();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [checking, setChecking] = useState(true);
   const [canClaimSuperadmin, setCanClaimSuperadmin] = useState(false);
   const [claiming, setClaiming] = useState(false);
 
+  // Check if superadmin claim is possible
   useEffect(() => {
     if (!user) return;
-    (supabase as any).rpc("has_superadmin").then(({ data }: { data: boolean | null }) => {
-      setCanClaimSuperadmin(data === false);
-    });
+    api.get<{ has_superadmin: boolean }>("/api/auth/bootstrap/has-superadmin")
+      .then((res) => setCanClaimSuperadmin(!res.has_superadmin))
+      .catch(() => {});
   }, [user]);
 
   const claimSuperadmin = async () => {
     setClaiming(true);
     try {
-      const { data, error } = await (supabase as any).rpc("claim_first_superadmin");
-      if (error) throw error;
-      if (data) {
-        toast.success("You are now Super Admin.");
+      const res = await api.post<{ claimed: boolean; message: string }>("/api/auth/bootstrap/claim-superadmin");
+      if (res.claimed) {
+        toast.success(res.message);
         await refreshRoles();
         navigate({ to: "/admin/users", replace: true });
       } else {
-        toast.info("A Super Admin already exists.");
+        toast.info(res.message);
         setCanClaimSuperadmin(false);
       }
     } catch (err) {
-      console.error("[auth] claim superadmin error:", err);
-      toast.error("Could not claim Super Admin.");
+      toast.error((err as Error).message ?? "Could not claim Super Admin.");
     } finally {
       setClaiming(false);
     }
   };
 
+  // Redirect once roles are loaded
   useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      if (loading || !user) return;
-      const nextProfile = await fetchUserProfile(user.id);
-      if (!mounted) return;
-      if (!isOnboardingComplete(nextProfile)) {
-        navigate({ to: "/select-role", replace: true });
-        return;
-      }
-      const target = dashboardForAccess(nextProfile, roles);
+    if (loading || !user) return;
+    if (isRoleAssigned(roles)) {
+      const target = dashboardForAccess(null, roles);
       navigate({ to: target as "/customer/dashboard", replace: true });
-      return;
-      setProfile(nextProfile);
-      setChecking(false);
-    };
-    run().catch((err) => {
-      console.error("[auth] dashboard profile check error:", err);
-      if (mounted) setChecking(false);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, [loading, navigate, roles, user]);
+    } else if (!canClaimSuperadmin) {
+      navigate({ to: "/select-role", replace: true });
+    }
+  }, [loading, user, roles, navigate, canClaimSuperadmin]);
 
-  if (loading || checking) {
+  if (loading) {
     return (
       <SiteLayout>
         <Section title="Opening your dashboard…" description="Session restored, redirecting…">
@@ -102,20 +84,13 @@ function DashboardPage() {
     );
   }
 
-  const displayRole = profile?.role ? roleLabels[profile.role] : "Customer";
-
   return (
     <SiteLayout>
       <Section
         eyebrow="Dashboard"
         title={<>Welcome to Musren, <span className="text-gradient">{user?.email?.split("@")[0]}</span></>}
-        description="Your account is verified and onboarding is complete. Choose a workspace to continue."
+        description="Your account is active. Choose a workspace to continue."
       >
-        <div className="mx-auto mb-8 flex max-w-3xl flex-col items-center gap-4">
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 capitalize">
-            {displayRole} account
-          </Badge>
-        </div>
         {canClaimSuperadmin && (
           <div className="mx-auto mb-10 max-w-5xl rounded-3xl border-2 border-primary/50 bg-gradient-to-br from-primary/15 via-accent/10 to-primary/5 p-8 sm:p-12 shadow-[0_20px_60px_-20px_hsl(var(--primary)/0.5)] ring-4 ring-primary/20 animate-pulse-slow">
             <div className="flex flex-col items-center gap-6 text-center">
@@ -132,7 +107,11 @@ function DashboardPage() {
               </div>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button disabled={claiming} size="lg" className="h-14 px-10 text-lg bg-gradient-to-r from-primary to-accent text-primary-foreground font-bold shadow-xl hover:scale-105 transition-transform">
+                  <Button
+                    disabled={claiming}
+                    size="lg"
+                    className="h-14 px-10 text-lg bg-gradient-to-r from-primary to-accent text-primary-foreground font-bold shadow-xl hover:scale-105 transition-transform"
+                  >
                     {claiming ? <Loader2 className="size-5 animate-spin" /> : <><ShieldCheck className="size-5" /> Claim Super Admin</>}
                   </Button>
                 </AlertDialogTrigger>
@@ -140,7 +119,8 @@ function DashboardPage() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Claim Super Admin role?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This grants your account ({user?.email}) full control over all users, roles, and admin settings. Only the first user can claim this — it cannot be undone from here.
+                      This grants your account ({user?.email}) full control over all users, roles, and admin settings.
+                      Only the first user can claim this — it cannot be undone from here.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -154,10 +134,26 @@ function DashboardPage() {
             </div>
           </div>
         )}
+
         <div className="grid gap-4 md:grid-cols-3">
-          <WorkspaceCard icon={UsersRound} title="Customer tools" description="Explore Musren solutions and request product access." href="/solutions" />
-          <WorkspaceCard icon={HandCoins} title="Affiliate workspace" description="Share referrals and track your rewards." href="/affiliates/dashboard" />
-          <WorkspaceCard icon={BriefcaseBusiness} title="Developer workspace" description="Manage API readiness and integration tools." href="/developers/dashboard" />
+          <WorkspaceCard
+            icon={UsersRound}
+            title="Customer tools"
+            description="Explore Musren solutions and request product access."
+            href="/solutions"
+          />
+          <WorkspaceCard
+            icon={HandCoins}
+            title="Affiliate workspace"
+            description="Share referrals and track your rewards."
+            href="/affiliates/dashboard"
+          />
+          <WorkspaceCard
+            icon={BriefcaseBusiness}
+            title="Developer workspace"
+            description="Manage API readiness and integration tools."
+            href="/developers/dashboard"
+          />
         </div>
       </Section>
     </SiteLayout>
@@ -170,7 +166,7 @@ function WorkspaceCard({
   description,
   href,
 }: {
-  icon: typeof ShoppingBag;
+  icon: typeof UsersRound;
   title: string;
   description: string;
   href: "/solutions" | "/affiliates/dashboard" | "/developers/dashboard";

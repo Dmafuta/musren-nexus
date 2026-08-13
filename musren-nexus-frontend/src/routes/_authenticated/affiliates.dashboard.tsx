@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { AffiliateShell as SiteLayout } from "@/components/layouts/AffiliateShell";
 import { Section } from "@/components/site/Section";
 import { Button } from "@/components/ui/button";
@@ -56,20 +57,8 @@ function AffiliateDashboard() {
 function DashboardContent({ userId, email }: { userId: string; email: string }) {
   const qc = useQueryClient();
 
-  // Realtime: refresh wallet/events/withdrawals/notifications when changed
-  useEffect(() => {
-    const ch = supabase.channel(`aff-${userId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "affiliate_wallets", filter: `user_id=eq.${userId}` },
-        () => qc.invalidateQueries({ queryKey: ["aff-wallet", userId] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "affiliate_events", filter: `user_id=eq.${userId}` },
-        () => qc.invalidateQueries({ queryKey: ["aff-events", userId] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "withdrawal_requests", filter: `user_id=eq.${userId}` },
-        () => qc.invalidateQueries({ queryKey: ["aff-withdrawals", userId] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "affiliate_notifications", filter: `user_id=eq.${userId}` },
-        () => qc.invalidateQueries({ queryKey: ["aff-notifications", userId] }))
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [userId, qc]);
+  // Realtime polling placeholder — realtime will be added via webhooks in a future phase
+  void qc;
 
   const wallet = useQuery({
     queryKey: ["aff-wallet", userId],

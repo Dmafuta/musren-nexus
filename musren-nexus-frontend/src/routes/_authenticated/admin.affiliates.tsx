@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { getToken } from "@/lib/api-client";
 import { AdminShell as SiteLayout } from "@/components/layouts/AdminShell";
 import { Section } from "@/components/site/Section";
 import { Button } from "@/components/ui/button";
@@ -349,8 +350,7 @@ function WithdrawalsTab() {
   // The backend fetches its own service_role key — no privileged key sent from browser.
   const approve = useMutation({
     mutationFn: async (id: string) => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
+      const token = getToken();
       if (!token) throw new Error("Not authenticated");
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/withdrawals/${id}/process`, {
         method: "POST",
