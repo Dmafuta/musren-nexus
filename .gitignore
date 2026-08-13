@@ -10,15 +10,21 @@ musren-nexus-frontend/.env
 musren-nexus-frontend/.env.*
 musren-nexus-frontend/*.local
 
-# ─── Backend ──────────────────────────────────────────────────────────────────
-musren-nexus-backend/backend/target/
-musren-nexus-backend/backend/.env
-musren-nexus-backend/backend/.env.*
+# ─── Laravel Backend ──────────────────────────────────────────────────────────
+musren-nexus-backend/api/vendor/
+musren-nexus-backend/api/.env
+musren-nexus-backend/api/.env.*
+musren-nexus-backend/api/storage/logs/
+musren-nexus-backend/api/storage/framework/cache/
+musren-nexus-backend/api/storage/framework/sessions/
+musren-nexus-backend/api/storage/framework/views/
+musren-nexus-backend/api/bootstrap/cache/*.php
+musren-nexus-backend/api/database/database.sqlite
+
+# ─── Old Spring Boot (pending manual delete) ──────────────────────────────────
+musren-nexus-backend/backend/
 musren-nexus-backend/.env
 musren-nexus-backend/.env.*
-*.jar
-*.war
-*.class
 
 # ─── IDE / OS ─────────────────────────────────────────────────────────────────
 .idea/
