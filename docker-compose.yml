@@ -2,18 +2,17 @@ version: "3.9"
 
 services:
 
-  # ─── Laravel Backend ─────────────────────────────────────────────────────────
+  # ─── Laravel (PHP-FPM) ────────────────────────────────────────────────────────
   backend:
     build:
       context: ./musren-nexus-backend/api
       dockerfile: Dockerfile
-    ports:
-      - "8081:8000"
     environment:
+      APP_NAME: "Musren Connect"
       APP_ENV: production
       APP_KEY: ${APP_KEY}
-      APP_URL: ${APP_BASE_URL:-http://localhost:8081}
-      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8081}
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost:8000}
 
       DB_CONNECTION: pgsql
       DB_HOST: ${DB_HOST:-127.0.0.1}
@@ -28,13 +27,14 @@ services:
 
       MPESA_CONSUMER_KEY: ${MPESA_CONSUMER_KEY}
       MPESA_CONSUMER_SECRET: ${MPESA_CONSUMER_SECRET}
-      MPESA_SHORTCODE: ${MPESA_SHORTCODE:-174379}
+      MPESA_SHORTCODE: ${MPESA_SHORTCODE}
       MPESA_PASSKEY: ${MPESA_PASSKEY}
-      MPESA_INITIATOR_NAME: ${MPESA_INITIATOR_NAME:-testapi}
+      MPESA_INITIATOR_NAME: ${MPESA_INITIATOR_NAME}
       MPESA_SECURITY_CREDENTIAL: ${MPESA_SECURITY_CREDENTIAL}
-      MPESA_ENV: ${MPESA_ENV:-sandbox}
+      MPESA_ENV: ${MPESA_ENV:-production}
+      MPESA_STK_CALLBACK_URL: ${MPESA_STK_CALLBACK_URL}
 
-      AT_USERNAME: ${AT_USERNAME:-sandbox}
+      AT_USERNAME: ${AT_USERNAME}
       AT_API_KEY: ${AT_API_KEY}
       AT_SENDER_ID: ${AT_SENDER_ID:-MUSREN}
 
@@ -43,32 +43,36 @@ services:
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-resend}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
-      MAIL_FROM_ADDRESS: ${MAIL_FROM:-noreply@musren.co.ke}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@musren.co.ke}
       MAIL_FROM_NAME: "Musren Connect"
 
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8081,http://localhost:8082,https://musren.quantumconnect.africa}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://musren.quantumconnect.africa}
 
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@musren.co.ke}
+
+    volumes:
+      # Persist storage (logs, cache, uploads)
+      - backend_storage:/var/www/html/storage
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8000/api/health"]
+      test: ["CMD", "php-fpm", "-t"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
     restart: unless-stopped
 
-  # ─── Frontend (dev server) ───────────────────────────────────────────────────
-  frontend:
-    image: oven/bun:1
-    working_dir: /app
-    volumes:
-      - ./musren-nexus-frontend:/app
+  # ─── Nginx reverse proxy ─────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
     ports:
-      - "5173:5173"
-    command: bun run dev --host 0.0.0.0
-    environment:
-      VITE_SUPABASE_URL: ${SUPABASE_URL}
-      VITE_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
-      VITE_API_URL: http://localhost:8081
+      - "${BACKEND_PORT:-8000}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./musren-nexus-backend/api/public:/var/www/html/public:ro
     depends_on:
       backend:
         condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  backend_storage:

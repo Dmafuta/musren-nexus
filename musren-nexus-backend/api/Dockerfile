@@ -1,6 +1,6 @@
 FROM php:8.4-fpm-alpine
 
-# Install system dependencies
+# System dependencies
 RUN apk add --no-cache \
     postgresql-dev \
     libzip-dev \
@@ -11,24 +11,36 @@ RUN apk add --no-cache \
         mbstring \
         bcmath \
         zip \
-        pcntl
+        pcntl \
+        opcache
 
-# Install Composer
+# OPcache for production
+RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.memory_consumption=128" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.max_accelerated_files=10000" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini
+
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Install dependencies (production only)
+# Install PHP dependencies (production only)
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Copy application
+# Copy application code
 COPY . .
 
-# Permissions
+# Storage + cache permissions
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-EXPOSE 8000
+# Entrypoint
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+EXPOSE 9000
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["php-fpm"]

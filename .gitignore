@@ -26,6 +26,9 @@ musren-nexus-backend/backend/
 musren-nexus-backend/.env
 musren-nexus-backend/.env.*
 
+# ─── Supabase ─────────────────────────────────────────────────────────────────
+musren-nexus-frontend/supabase/.temp/
+
 # ─── IDE / OS ─────────────────────────────────────────────────────────────────
 .idea/
 *.iml

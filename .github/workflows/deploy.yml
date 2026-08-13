@@ -1,0 +1,59 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  # ── Backend: build & deploy Docker container to VPS ─────────────────────────
+  deploy-backend:
+    name: Backend → VPS (Docker)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /srv/musren-nexus
+            git pull origin master
+            docker compose up -d --build --remove-orphans
+            docker compose exec -T backend php artisan migrate --force
+            docker compose exec -T backend php artisan config:cache
+            docker compose exec -T backend php artisan route:cache
+
+  # ── Frontend: build & deploy to Cloudflare Workers ──────────────────────────
+  deploy-frontend:
+    name: Frontend → Cloudflare Workers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: musren-nexus-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: musren-nexus-frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: musren-nexus-frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: Deploy to Cloudflare Workers
+        run: npx wrangler deploy
+        working-directory: musren-nexus-frontend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
