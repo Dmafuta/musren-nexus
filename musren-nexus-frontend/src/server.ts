@@ -68,11 +68,18 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
-    const { pathname } = new URL(request.url);
+    const url = new URL(request.url);
+    const { pathname } = url;
 
-    // Pass /api/* requests through to the Cloudflare origin (VPS).
-    // /api/public/* is handled by TanStack Start server routes (e.g. referral redirect).
+    // Proxy /api/* to the backend (except /api/public/* which TanStack Start handles).
     if (pathname.startsWith("/api/") && !pathname.startsWith("/api/public/")) {
+      const backendUrl = (env as Record<string, string>).BACKEND_URL;
+      if (backendUrl) {
+        // Worker is on a different domain (e.g. workers.dev) — explicit proxy to VPS
+        const target = new URL(pathname + url.search, backendUrl);
+        return fetch(new Request(target.toString(), request));
+      }
+      // Worker is on the same domain as the VPS — pass through to Cloudflare origin
       return fetch(request);
     }
 
