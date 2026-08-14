@@ -53,6 +53,8 @@ services:
     volumes:
       # Persist storage (logs, cache, uploads)
       - backend_storage:/var/www/html/storage
+    security_opt:
+      - seccomp:unconfined
     healthcheck:
       test: ["CMD", "php-fpm", "-t"]
       interval: 30s
