@@ -75,9 +75,18 @@ export default {
     if (pathname.startsWith("/api/") && !pathname.startsWith("/api/public/")) {
       const backendUrl = (env as Record<string, string>).BACKEND_URL;
       if (backendUrl) {
-        // Worker is on a different domain (e.g. workers.dev) — explicit proxy to VPS
+        // Worker is on a different domain (e.g. workers.dev) — explicit proxy to VPS.
+        // Build the outgoing request manually; Cloudflare Workers restricts cloning
+        // a Request object directly via `new Request(url, existingRequest)`.
         const target = new URL(pathname + url.search, backendUrl);
-        return fetch(new Request(target.toString(), request));
+        const proxyHeaders = new Headers(request.headers);
+        proxyHeaders.set("host", new URL(backendUrl).host);
+        return fetch(target.toString(), {
+          method: request.method,
+          headers: proxyHeaders,
+          body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
+          redirect: "follow",
+        });
       }
       // Worker is on the same domain as the VPS — pass through to Cloudflare origin
       return fetch(request);
