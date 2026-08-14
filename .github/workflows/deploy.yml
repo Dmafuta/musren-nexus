@@ -66,9 +66,6 @@ jobs:
       - name: Build
         run: npm run build
         working-directory: musren-nexus-frontend
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Deploy to Cloudflare Workers
         # vite build (via Nitro) generates .output/server/wrangler.json with the

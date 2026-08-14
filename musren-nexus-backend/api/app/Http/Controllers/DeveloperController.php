@@ -17,7 +17,7 @@ class DeveloperController extends Controller
      */
     public function listKeys(Request $request): JsonResponse
     {
-        $userId = $request->attributes->get('supabase_user_id');
+        $userId = $request->attributes->get('auth_user_id');
         $keys   = ApiKey::where('user_id', $userId)->orderByDesc('created_at')->get();
         return response()->json($keys);
     }
@@ -28,7 +28,7 @@ class DeveloperController extends Controller
     public function createKey(Request $request): JsonResponse
     {
         $data   = $request->validate(['name' => 'required|string|max:100']);
-        $userId = $request->attributes->get('supabase_user_id');
+        $userId = $request->attributes->get('auth_user_id');
 
         $raw    = 'sk_live_' . Str::random(40);
         $hash   = hash('sha256', $raw);
@@ -56,7 +56,7 @@ class DeveloperController extends Controller
      */
     public function revokeKey(Request $request, string $id): JsonResponse
     {
-        $userId = $request->attributes->get('supabase_user_id');
+        $userId = $request->attributes->get('auth_user_id');
         $key    = ApiKey::where('id', $id)->where('user_id', $userId)->firstOrFail();
         $key->update(['active' => false]);
         return response()->json(['message' => 'Key revoked']);
@@ -83,7 +83,7 @@ class DeveloperController extends Controller
             'url'    => 'required|url|max:500',
             'events' => 'required|array|min:1',
         ]);
-        $userId = $request->attributes->get('supabase_user_id');
+        $userId = $request->attributes->get('auth_user_id');
 
         $webhook = WebhookEndpoint::create([
             'user_id' => $userId,

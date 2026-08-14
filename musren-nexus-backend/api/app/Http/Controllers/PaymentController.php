@@ -22,7 +22,7 @@ class PaymentController extends Controller
             'amount' => 'required|numeric|min:1|max:150000',
         ]);
 
-        $userId = $request->attributes->get('supabase_user_id');
+        $userId = $request->attributes->get('auth_user_id');
         $phone  = preg_replace('/^0/', '+254', $data['phone']);
         $amount = (int) $data['amount'];
 

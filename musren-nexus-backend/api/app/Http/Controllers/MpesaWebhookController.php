@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AffiliateWallet;
 use App\Models\PaymentOrder;
+use App\Models\WalletLedger;
 use App\Services\EmailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class MpesaWebhookController extends Controller
@@ -98,26 +100,26 @@ class MpesaWebhookController extends Controller
 
     private function creditWallet(PaymentOrder $order): void
     {
-        // Credit via Supabase REST (service role key bypasses RLS)
-        $supabaseUrl = config('services.supabase.url');
-        $serviceKey  = config('services.supabase.service_role_key');
-
-        if (! $supabaseUrl || ! $serviceKey) {
-            Log::warning('Supabase not configured — wallet not credited', ['order' => $order->id]);
-            return;
-        }
+        $amountCents = (int) round((float) $order->amount * 100);
 
         try {
-            Http::withHeaders([
-                'apikey'        => $serviceKey,
-                'Authorization' => "Bearer {$serviceKey}",
-                'Content-Type'  => 'application/json',
-                'Prefer'        => 'return=minimal',
-            ])->post("{$supabaseUrl}/rest/v1/rpc/credit_wallet", [
-                'p_user_id' => $order->user_id,
-                'p_amount'  => (float) $order->amount,
-                'p_ref'     => $order->id,
-            ]);
+            DB::transaction(function () use ($order, $amountCents) {
+                AffiliateWallet::firstOrCreate(
+                    ['user_id' => $order->user_id],
+                    ['balance_points' => 0, 'pending_points' => 0, 'lifetime_points' => 0, 'balance_cash_cents' => 0]
+                );
+
+                AffiliateWallet::where('user_id', $order->user_id)
+                    ->increment('balance_cash_cents', $amountCents);
+
+                WalletLedger::create([
+                    'user_id'     => $order->user_id,
+                    'amount_cents' => $amountCents,
+                    'kind'        => 'topup',
+                    'description' => 'M-Pesa top-up',
+                    'ref'         => $order->id,
+                ]);
+            });
         } catch (\Throwable $e) {
             Log::error('Failed to credit wallet', ['order' => $order->id, 'error' => $e->getMessage()]);
         }

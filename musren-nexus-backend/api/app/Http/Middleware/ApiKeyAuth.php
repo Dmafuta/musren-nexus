@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
  *   Authorization: ApiKey sk_live_<...>
  *
  * SHA-256 hashes the raw key and looks it up in developer_api_keys.
- * On success, sets request attribute supabase_user_id so downstream
+ * On success, sets auth_user_id and auth_roles so downstream
  * controllers work the same as with JWT auth.
  */
 class ApiKeyAuth
@@ -39,8 +39,8 @@ class ApiKeyAuth
         $apiKey->last_used_at = now();
         $apiKey->save();
 
-        $request->attributes->set('supabase_user_id', (string) $apiKey->user_id);
-        $request->attributes->set('supabase_role', 'developer');
+        $request->attributes->set('auth_user_id', (string) $apiKey->user_id);
+        $request->attributes->set('auth_roles', ['developer']);
 
         return $next($request);
     }
