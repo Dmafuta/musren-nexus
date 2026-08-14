@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+echo "[entrypoint] Discovering packages..."
+php artisan package:discover --ansi
+
 echo "[entrypoint] Caching config, routes and views..."
 php artisan config:cache
 php artisan route:cache
