@@ -12,6 +12,10 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  // Force Nitro to run during `vite build` (outside the Lovable sandbox).
+  // The cloudflare-module preset outputs .output/server/{index.mjs,wrangler.json}
+  // which the CI deploy step consumes with `wrangler deploy --config`.
+  nitro: { preset: "cloudflare-module" },
   vite: {
     server: {
       proxy: {
