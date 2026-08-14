@@ -71,7 +71,9 @@ jobs:
         # vite build (via Nitro) generates .output/server/wrangler.json with the
         # correct main, no_bundle:true, and assets config merged from our wrangler.jsonc.
         # Running wrangler against that generated config avoids re-bundling from source.
-        run: npx wrangler deploy --config .output/server/wrangler.json
+        # --var passes runtime env vars that wrangler.jsonc defines but the generated
+        # wrangler.json doesn't inherit (since we deploy from the generated file).
+        run: npx wrangler deploy --config .output/server/wrangler.json --var BACKEND_URL:http://musren.quantumconnect.africa
         working-directory: musren-nexus-frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
