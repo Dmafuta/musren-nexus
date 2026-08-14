@@ -34,8 +34,10 @@ function decodeJwt(token: string): { sub: string; email: string; name?: string; 
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
+    // Convert base64url → base64 and restore missing padding so atob() never throws
     const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    return JSON.parse(atob(b64));
+    const padded = b64.padEnd(b64.length + (4 - (b64.length % 4)) % 4, "=");
+    return JSON.parse(atob(padded));
   } catch {
     return null;
   }

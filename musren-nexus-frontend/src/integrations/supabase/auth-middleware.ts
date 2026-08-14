@@ -18,7 +18,9 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
 
     try {
       const payloadB64 = token.split('.')[1];
-      const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+      const b64 = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = b64.padEnd(b64.length + (4 - (b64.length % 4)) % 4, '=');
+      const payload = JSON.parse(atob(padded));
 
       if (!payload.sub || payload.exp * 1000 < Date.now()) {
         throw new Response('Unauthorized: token expired', { status: 401 });
