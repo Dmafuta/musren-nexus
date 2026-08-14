@@ -67,13 +67,22 @@ jobs:
         run: npm run build
         working-directory: musren-nexus-frontend
 
+      - name: Inject vars into generated wrangler.json
+        # The Nitro-generated wrangler.json doesn't carry vars from wrangler.jsonc.
+        # Patch it so BACKEND_URL is available in the deployed Worker.
+        run: |
+          node -e "
+            const fs = require('fs');
+            const p = '.output/server/wrangler.json';
+            const c = JSON.parse(fs.readFileSync(p, 'utf8'));
+            c.vars = { ...(c.vars || {}), BACKEND_URL: 'http://musren.quantumconnect.africa' };
+            fs.writeFileSync(p, JSON.stringify(c, null, 2));
+            console.log('Patched wrangler.json vars:', c.vars);
+          "
+        working-directory: musren-nexus-frontend
+
       - name: Deploy to Cloudflare Workers
-        # vite build (via Nitro) generates .output/server/wrangler.json with the
-        # correct main, no_bundle:true, and assets config merged from our wrangler.jsonc.
-        # Running wrangler against that generated config avoids re-bundling from source.
-        # --var passes runtime env vars that wrangler.jsonc defines but the generated
-        # wrangler.json doesn't inherit (since we deploy from the generated file).
-        run: npx wrangler deploy --config .output/server/wrangler.json --var BACKEND_URL:http://musren.quantumconnect.africa
+        run: npx wrangler deploy --config .output/server/wrangler.json
         working-directory: musren-nexus-frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
