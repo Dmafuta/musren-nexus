@@ -60,7 +60,7 @@ jobs:
           cache-dependency-path: musren-nexus-frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
         working-directory: musren-nexus-frontend
 
       - name: Build
