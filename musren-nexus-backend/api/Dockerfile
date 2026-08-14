@@ -2,7 +2,7 @@ FROM php:8.4-fpm-alpine
 
 # System dependencies
 RUN apk add --no-cache \
-    postgresql-dev \
+    libpq-dev \
     libzip-dev \
     oniguruma-dev \
     && docker-php-ext-install \
