@@ -13,13 +13,13 @@ export const Route = createFileRoute("/api/public/r/$code")({
         const dest = product ? `/solutions/${product}` : "/";
 
         try {
-          const backendUrl = process.env.VITE_API_URL || "http://127.0.0.1:8000";
+          // Use the request's own origin so this works in dev (Vite proxy) and production
+          // (Cloudflare Worker passes /api/* to VPS origin automatically).
+          const origin = new URL(request.url).origin;
           const qs = new URLSearchParams();
           if (product) qs.set("p", product);
           if (channel) qs.set("ch", channel);
-          // Fire-and-forget — Laravel handles tracking + redirect internally,
-          // but we only need the tracking side-effect here.
-          await fetch(`${backendUrl}/api/referral/${params.code}?${qs}`, {
+          await fetch(`${origin}/api/referral/${params.code}?${qs}`, {
             method: "GET",
             redirect: "manual", // don't follow Laravel's redirect
           });

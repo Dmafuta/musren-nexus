@@ -68,6 +68,14 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const { pathname } = new URL(request.url);
+
+    // Pass /api/* requests through to the Cloudflare origin (VPS).
+    // /api/public/* is handled by TanStack Start server routes (e.g. referral redirect).
+    if (pathname.startsWith("/api/") && !pathname.startsWith("/api/public/")) {
+      return fetch(request);
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

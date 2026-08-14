@@ -25,7 +25,7 @@ export function BulkSmsForm({ productName }: { productName: string }) {
       email: (form.elements.namedItem("email") as HTMLInputElement).value,
     };
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/bulk-sms/applications`, {
+      const res = await fetch(`/api/bulk-sms/applications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

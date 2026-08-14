@@ -12,8 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api, getToken } from "@/lib/api-client";
 import { toast } from "sonner";
 
-const API_URL = import.meta.env.VITE_API_URL as string;
-
 export const Route = createFileRoute("/_authenticated/customer/dashboard")({
   head: () => ({
     meta: [
@@ -228,7 +226,7 @@ function TopUpCard({ userId }: { userId: string }) {
       const token = getToken();
       if (!token) throw new Error("Not authenticated");
 
-      const res = await fetch(`${API_URL}/api/payments/topup`, {
+      const res = await fetch(`/api/payments/topup`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ phone, amountKes }),

@@ -35,8 +35,6 @@ export const Route = createFileRoute("/_authenticated/developers/dashboard")({
   component: DeveloperDashboard,
 });
 
-const API_URL = import.meta.env.VITE_API_URL as string;
-
 const WEBHOOK_EVENTS = [
   "withdrawal.approved",
   "withdrawal.paid",
@@ -153,7 +151,7 @@ function ApiKeysTab() {
     queryKey: ["dev-api-keys"],
     queryFn: async () => {
       const headers = getAuthHeader();
-      const res = await fetch(`${API_URL}/api/developer/keys`, { headers });
+      const res = await fetch(`/api/developer/keys`, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     },
@@ -162,7 +160,7 @@ function ApiKeysTab() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const headers = { ...(getAuthHeader()), "Content-Type": "application/json" };
-      const res = await fetch(`${API_URL}/api/developer/keys`, {
+      const res = await fetch(`/api/developer/keys`, {
         method: "POST",
         headers,
         body: JSON.stringify({ name: newName, environment: newEnv }),
@@ -183,7 +181,7 @@ function ApiKeysTab() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const headers = getAuthHeader();
-      const res = await fetch(`${API_URL}/api/developer/keys/${id}`, { method: "DELETE", headers });
+      const res = await fetch(`/api/developer/keys/${id}`, { method: "DELETE", headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     },
     onSuccess: () => {
@@ -308,7 +306,7 @@ function WebhooksTab() {
     queryKey: ["dev-webhooks"],
     queryFn: async () => {
       const headers = getAuthHeader();
-      const res = await fetch(`${API_URL}/api/developer/webhooks`, { headers });
+      const res = await fetch(`/api/developer/webhooks`, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     },
@@ -317,7 +315,7 @@ function WebhooksTab() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const headers = { ...(getAuthHeader()), "Content-Type": "application/json" };
-      const res = await fetch(`${API_URL}/api/developer/webhooks`, {
+      const res = await fetch(`/api/developer/webhooks`, {
         method: "POST",
         headers,
         body: JSON.stringify({ url: newUrl, events: selectedEvents }),
@@ -338,7 +336,7 @@ function WebhooksTab() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const headers = getAuthHeader();
-      const res = await fetch(`${API_URL}/api/developer/webhooks/${id}`, { method: "DELETE", headers });
+      const res = await fetch(`/api/developer/webhooks/${id}`, { method: "DELETE", headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     },
     onSuccess: () => {
