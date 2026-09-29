@@ -30,6 +30,10 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedMerchantRewardConfigRouteImport } from './routes/_authenticated/merchant.reward-config'
 import { Route as AuthenticatedMerchantDashboardRouteImport } from './routes/_authenticated/merchant.dashboard'
 import { Route as AuthenticatedDevelopersDashboardRouteImport } from './routes/_authenticated/developers.dashboard'
+import { Route as AuthenticatedCustomerWalletRouteImport } from './routes/_authenticated/customer.wallet'
+import { Route as AuthenticatedCustomerTransactionsRouteImport } from './routes/_authenticated/customer.transactions'
+import { Route as AuthenticatedCustomerRewardsRouteImport } from './routes/_authenticated/customer.rewards'
+import { Route as AuthenticatedCustomerProfileRouteImport } from './routes/_authenticated/customer.profile'
 import { Route as AuthenticatedCustomerDashboardRouteImport } from './routes/_authenticated/customer.dashboard'
 import { Route as AuthenticatedAffiliatesDashboardRouteImport } from './routes/_authenticated/affiliates.dashboard'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
@@ -148,6 +152,30 @@ const AuthenticatedDevelopersDashboardRoute =
     path: '/developers/dashboard',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedCustomerWalletRoute =
+  AuthenticatedCustomerWalletRouteImport.update({
+    id: '/customer/wallet',
+    path: '/customer/wallet',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCustomerTransactionsRoute =
+  AuthenticatedCustomerTransactionsRouteImport.update({
+    id: '/customer/transactions',
+    path: '/customer/transactions',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCustomerRewardsRoute =
+  AuthenticatedCustomerRewardsRouteImport.update({
+    id: '/customer/rewards',
+    path: '/customer/rewards',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCustomerProfileRoute =
+  AuthenticatedCustomerProfileRouteImport.update({
+    id: '/customer/profile',
+    path: '/customer/profile',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCustomerDashboardRoute =
   AuthenticatedCustomerDashboardRouteImport.update({
     id: '/customer/dashboard',
@@ -233,6 +261,10 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/affiliates/dashboard': typeof AuthenticatedAffiliatesDashboardRoute
   '/customer/dashboard': typeof AuthenticatedCustomerDashboardRoute
+  '/customer/profile': typeof AuthenticatedCustomerProfileRoute
+  '/customer/rewards': typeof AuthenticatedCustomerRewardsRoute
+  '/customer/transactions': typeof AuthenticatedCustomerTransactionsRoute
+  '/customer/wallet': typeof AuthenticatedCustomerWalletRoute
   '/developers/dashboard': typeof AuthenticatedDevelopersDashboardRoute
   '/merchant/dashboard': typeof AuthenticatedMerchantDashboardRoute
   '/merchant/reward-config': typeof AuthenticatedMerchantRewardConfigRoute
@@ -265,6 +297,10 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/affiliates/dashboard': typeof AuthenticatedAffiliatesDashboardRoute
   '/customer/dashboard': typeof AuthenticatedCustomerDashboardRoute
+  '/customer/profile': typeof AuthenticatedCustomerProfileRoute
+  '/customer/rewards': typeof AuthenticatedCustomerRewardsRoute
+  '/customer/transactions': typeof AuthenticatedCustomerTransactionsRoute
+  '/customer/wallet': typeof AuthenticatedCustomerWalletRoute
   '/developers/dashboard': typeof AuthenticatedDevelopersDashboardRoute
   '/merchant/dashboard': typeof AuthenticatedMerchantDashboardRoute
   '/merchant/reward-config': typeof AuthenticatedMerchantRewardConfigRoute
@@ -299,6 +335,10 @@ export interface FileRoutesById {
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/affiliates/dashboard': typeof AuthenticatedAffiliatesDashboardRoute
   '/_authenticated/customer/dashboard': typeof AuthenticatedCustomerDashboardRoute
+  '/_authenticated/customer/profile': typeof AuthenticatedCustomerProfileRoute
+  '/_authenticated/customer/rewards': typeof AuthenticatedCustomerRewardsRoute
+  '/_authenticated/customer/transactions': typeof AuthenticatedCustomerTransactionsRoute
+  '/_authenticated/customer/wallet': typeof AuthenticatedCustomerWalletRoute
   '/_authenticated/developers/dashboard': typeof AuthenticatedDevelopersDashboardRoute
   '/_authenticated/merchant/dashboard': typeof AuthenticatedMerchantDashboardRoute
   '/_authenticated/merchant/reward-config': typeof AuthenticatedMerchantRewardConfigRoute
@@ -333,6 +373,10 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/affiliates/dashboard'
     | '/customer/dashboard'
+    | '/customer/profile'
+    | '/customer/rewards'
+    | '/customer/transactions'
+    | '/customer/wallet'
     | '/developers/dashboard'
     | '/merchant/dashboard'
     | '/merchant/reward-config'
@@ -365,6 +409,10 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/affiliates/dashboard'
     | '/customer/dashboard'
+    | '/customer/profile'
+    | '/customer/rewards'
+    | '/customer/transactions'
+    | '/customer/wallet'
     | '/developers/dashboard'
     | '/merchant/dashboard'
     | '/merchant/reward-config'
@@ -398,6 +446,10 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users'
     | '/_authenticated/affiliates/dashboard'
     | '/_authenticated/customer/dashboard'
+    | '/_authenticated/customer/profile'
+    | '/_authenticated/customer/rewards'
+    | '/_authenticated/customer/transactions'
+    | '/_authenticated/customer/wallet'
     | '/_authenticated/developers/dashboard'
     | '/_authenticated/merchant/dashboard'
     | '/_authenticated/merchant/reward-config'
@@ -574,6 +626,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDevelopersDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/customer/wallet': {
+      id: '/_authenticated/customer/wallet'
+      path: '/customer/wallet'
+      fullPath: '/customer/wallet'
+      preLoaderRoute: typeof AuthenticatedCustomerWalletRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/customer/transactions': {
+      id: '/_authenticated/customer/transactions'
+      path: '/customer/transactions'
+      fullPath: '/customer/transactions'
+      preLoaderRoute: typeof AuthenticatedCustomerTransactionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/customer/rewards': {
+      id: '/_authenticated/customer/rewards'
+      path: '/customer/rewards'
+      fullPath: '/customer/rewards'
+      preLoaderRoute: typeof AuthenticatedCustomerRewardsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/customer/profile': {
+      id: '/_authenticated/customer/profile'
+      path: '/customer/profile'
+      fullPath: '/customer/profile'
+      preLoaderRoute: typeof AuthenticatedCustomerProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/customer/dashboard': {
       id: '/_authenticated/customer/dashboard'
       path: '/customer/dashboard'
@@ -673,6 +753,10 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedAffiliatesDashboardRoute: typeof AuthenticatedAffiliatesDashboardRoute
   AuthenticatedCustomerDashboardRoute: typeof AuthenticatedCustomerDashboardRoute
+  AuthenticatedCustomerProfileRoute: typeof AuthenticatedCustomerProfileRoute
+  AuthenticatedCustomerRewardsRoute: typeof AuthenticatedCustomerRewardsRoute
+  AuthenticatedCustomerTransactionsRoute: typeof AuthenticatedCustomerTransactionsRoute
+  AuthenticatedCustomerWalletRoute: typeof AuthenticatedCustomerWalletRoute
   AuthenticatedDevelopersDashboardRoute: typeof AuthenticatedDevelopersDashboardRoute
   AuthenticatedMerchantDashboardRoute: typeof AuthenticatedMerchantDashboardRoute
   AuthenticatedMerchantRewardConfigRoute: typeof AuthenticatedMerchantRewardConfigRoute
@@ -684,6 +768,11 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedAffiliatesDashboardRoute: AuthenticatedAffiliatesDashboardRoute,
   AuthenticatedCustomerDashboardRoute: AuthenticatedCustomerDashboardRoute,
+  AuthenticatedCustomerProfileRoute: AuthenticatedCustomerProfileRoute,
+  AuthenticatedCustomerRewardsRoute: AuthenticatedCustomerRewardsRoute,
+  AuthenticatedCustomerTransactionsRoute:
+    AuthenticatedCustomerTransactionsRoute,
+  AuthenticatedCustomerWalletRoute: AuthenticatedCustomerWalletRoute,
   AuthenticatedDevelopersDashboardRoute: AuthenticatedDevelopersDashboardRoute,
   AuthenticatedMerchantDashboardRoute: AuthenticatedMerchantDashboardRoute,
   AuthenticatedMerchantRewardConfigRoute:

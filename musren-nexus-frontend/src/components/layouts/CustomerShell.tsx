@@ -3,12 +3,12 @@ import { LayoutDashboard, Gift, Wallet, Receipt, UserRound, Package } from "luci
 import { RoleShell, type NavItem } from "./RoleShell";
 
 const items: NavItem[] = [
-  { title: "Dashboard", url: "/customer/dashboard", icon: LayoutDashboard },
-  { title: "Solutions", url: "/solutions", icon: Package },
-  { title: "Rewards", url: "/customer/dashboard", icon: Gift },
-  { title: "Wallet", url: "/customer/dashboard", icon: Wallet },
-  { title: "Transactions", url: "/customer/dashboard", icon: Receipt },
-  { title: "Profile", url: "/customer/dashboard", icon: UserRound },
+  { title: "Dashboard",    url: "/customer/dashboard",    icon: LayoutDashboard },
+  { title: "Solutions",    url: "/solutions",             icon: Package },
+  { title: "Rewards",      url: "/customer/rewards",      icon: Gift },
+  { title: "Wallet",       url: "/customer/wallet",       icon: Wallet },
+  { title: "Transactions", url: "/customer/transactions", icon: Receipt },
+  { title: "Profile",      url: "/customer/profile",      icon: UserRound },
 ];
 
 export function CustomerShell({ children }: { children: ReactNode }) {
