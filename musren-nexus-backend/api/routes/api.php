@@ -71,7 +71,9 @@ Route::middleware(JwtAuth::class)->group(function () {
         Route::get('events',        [AffiliateController::class, 'events']);
         Route::get('withdrawals',   [AffiliateController::class, 'withdrawals']);
         Route::post('withdraw',     [AffiliateController::class, 'withdraw']);
-        Route::get('notifications', [AffiliateController::class, 'notifications']);
+        Route::get('notifications',              [AffiliateController::class, 'notifications']);
+        Route::post('notifications/read-all',    [AffiliateController::class, 'markAllNotificationsRead']);
+        Route::post('notifications/{id}/read',   [AffiliateController::class, 'markNotificationRead']);
         Route::get('promotions',    [AffiliateController::class, 'promotions']);
         Route::get('rates',         [AffiliateController::class, 'rates']);
         Route::get('codes',         [AffiliateController::class, 'codes']);

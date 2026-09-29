@@ -135,7 +135,7 @@ function TopUpCard({ userId }: { userId: string }) {
       const res = await fetch("/api/payments/topup", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, amountKes }),
+        body: JSON.stringify({ phone, amount: amountKes }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));

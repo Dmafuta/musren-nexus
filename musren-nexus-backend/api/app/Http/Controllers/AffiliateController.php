@@ -103,6 +103,27 @@ class AffiliateController extends Controller
         return response()->json(['data' => $notifications]);
     }
 
+    /** POST /api/affiliate/notifications/{id}/read */
+    public function markNotificationRead(Request $request, string $id): JsonResponse
+    {
+        $userId = $request->attributes->get('auth_user_id');
+        $n = AffiliateNotification::where('id', $id)->where('user_id', $userId)->firstOrFail();
+        if (! $n->read_at) {
+            $n->update(['read_at' => now()]);
+        }
+        return response()->json(['ok' => true]);
+    }
+
+    /** POST /api/affiliate/notifications/read-all */
+    public function markAllNotificationsRead(Request $request): JsonResponse
+    {
+        $userId = $request->attributes->get('auth_user_id');
+        AffiliateNotification::where('user_id', $userId)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+        return response()->json(['ok' => true]);
+    }
+
     // ── Promotions ───────────────────────────────────────────────────────────
 
     public function promotions(): JsonResponse
