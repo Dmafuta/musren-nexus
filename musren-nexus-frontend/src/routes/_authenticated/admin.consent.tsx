@@ -66,7 +66,7 @@ function ConsentAdminContent() {
       <Section eyebrow="Admin" title="Consent management"
         description="Configure ODPC policy versions, default opt-ins and re-prompt behavior.">
         <div className="mb-6">
-          <Link to="/admin/corporate-topup" className="text-sm text-muted-foreground inline-flex items-center gap-1.5 hover:text-foreground">
+          <Link to="/admin/dashboard" className="text-sm text-muted-foreground inline-flex items-center gap-1.5 hover:text-foreground">
             <ArrowLeft className="size-4" /> Back to admin
           </Link>
         </div>
