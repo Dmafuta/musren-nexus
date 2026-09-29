@@ -90,8 +90,11 @@ Route::middleware(JwtAuth::class)->group(function () {
 
     // Merchant
     Route::prefix('merchant')->middleware(RoleGuard::class . ':merchant,admin,superadmin')->group(function () {
-        Route::get('reward-rules',         [MerchantController::class, 'rewardRules']);
-        Route::patch('reward-rules/{id}',  [MerchantController::class, 'updateRewardRule']);
+        Route::get('reward-rules',        [MerchantController::class, 'rewardRules']);
+        Route::patch('reward-rules/{id}', [MerchantController::class, 'updateRewardRule']);
+        Route::get('analytics',           [MerchantController::class, 'analytics']);
+        Route::get('conversions',         [MerchantController::class, 'conversions']);
+        Route::get('affiliates',          [MerchantController::class, 'affiliates']);
     });
 
     // Developer: API keys & webhooks

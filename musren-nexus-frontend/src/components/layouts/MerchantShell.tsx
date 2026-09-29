@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
-import { LayoutDashboard, Megaphone, Users, TrendingUp, BarChart3, Settings2 } from "lucide-react";
+import { LayoutDashboard, Users, TrendingUp, BarChart3, Settings2 } from "lucide-react";
 import { RoleShell, type NavItem } from "./RoleShell";
 
 const items: NavItem[] = [
-  { title: "Dashboard", url: "/merchant/dashboard", icon: LayoutDashboard },
-  { title: "Campaigns", url: "/merchant/dashboard", icon: Megaphone },
-  { title: "Affiliates", url: "/merchant/dashboard", icon: Users },
-  { title: "Conversions", url: "/merchant/dashboard", icon: TrendingUp },
-  { title: "Analytics", url: "/merchant/dashboard", icon: BarChart3 },
-  { title: "Settings", url: "/merchant/dashboard", icon: Settings2 },
+  { title: "Dashboard",    url: "/merchant/dashboard",     icon: LayoutDashboard },
+  { title: "Analytics",   url: "/merchant/analytics",     icon: BarChart3 },
+  { title: "Conversions", url: "/merchant/conversions",   icon: TrendingUp },
+  { title: "Affiliates",  url: "/merchant/affiliates",    icon: Users },
+  { title: "Reward rules", url: "/merchant/reward-config", icon: Settings2 },
 ];
 
 export function MerchantShell({ children }: { children: ReactNode }) {
