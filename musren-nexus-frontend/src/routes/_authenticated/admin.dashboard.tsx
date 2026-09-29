@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight, ShieldCheck, Users, Megaphone, FileCheck2, Receipt,
-  Loader2, AlertCircle,
+  Loader2, AlertCircle, MessageSquare,
 } from "lucide-react";
 import { AdminShell as SiteLayout } from "@/components/layouts/AdminShell";
 import { Section } from "@/components/site/Section";
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/admin/dashboard")({
 const navCards = [
   { href: "/admin/users",           title: "Users & roles",      description: "Grant or revoke access for any team member.",  icon: Users },
   { href: "/admin/role-requests",   title: "Role requests",       description: "Review and approve role change requests.",     icon: FileCheck2 },
+  { href: "/admin/bulk-sms",        title: "Bulk SMS",            description: "Review and approve sender ID applications.",   icon: MessageSquare },
   { href: "/admin/affiliates",      title: "Affiliates",          description: "Manage codes, assets, templates and payouts.", icon: Megaphone },
   { href: "/admin/corporate-topup", title: "Corporate top-ups",   description: "Process bulk top-up requests.",                icon: Receipt },
   { href: "/admin/consent",         title: "Consent log",         description: "Audit user consent records.",                  icon: ShieldCheck },
@@ -75,7 +76,7 @@ function KpiCards() {
   const kpis = [
     { label: "Total users",         value: data?.total_users,         href: "/admin/users" as const },
     { label: "Pending withdrawals",  value: data?.pending_withdrawals,  href: "/admin/affiliates" as const },
-    { label: "Pending SMS apps",     value: data?.pending_bulk_sms,     href: null },
+    { label: "Pending SMS apps",     value: data?.pending_bulk_sms,     href: "/admin/bulk-sms" as const },
     { label: "Active affiliates",    value: data?.active_affiliates,    href: "/admin/affiliates" as const },
   ];
 
