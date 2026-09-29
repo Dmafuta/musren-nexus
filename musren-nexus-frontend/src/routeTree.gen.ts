@@ -46,6 +46,7 @@ import { Route as AuthenticatedAdminRoleRequestsRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin.dashboard'
 import { Route as AuthenticatedAdminCorporateTopupRouteImport } from './routes/_authenticated/admin.corporate-topup'
 import { Route as AuthenticatedAdminConsentRouteImport } from './routes/_authenticated/admin.consent'
+import { Route as AuthenticatedAdminBulkSmsRouteImport } from './routes/_authenticated/admin.bulk-sms'
 import { Route as AuthenticatedAdminAffiliatesRouteImport } from './routes/_authenticated/admin.affiliates'
 import { Route as ApiPublicRCodeRouteImport } from './routes/api/public/r.$code'
 import { Route as AuthenticatedAffiliatesPromoteSlugRouteImport } from './routes/_authenticated/affiliates.promote.$slug'
@@ -252,6 +253,12 @@ const AuthenticatedAdminConsentRoute =
     path: '/consent',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminBulkSmsRoute =
+  AuthenticatedAdminBulkSmsRouteImport.update({
+    id: '/bulk-sms',
+    path: '/bulk-sms',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminAffiliatesRoute =
   AuthenticatedAdminAffiliatesRouteImport.update({
     id: '/affiliates',
@@ -289,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/admin/affiliates': typeof AuthenticatedAdminAffiliatesRoute
+  '/admin/bulk-sms': typeof AuthenticatedAdminBulkSmsRoute
   '/admin/consent': typeof AuthenticatedAdminConsentRoute
   '/admin/corporate-topup': typeof AuthenticatedAdminCorporateTopupRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
@@ -330,6 +338,7 @@ export interface FileRoutesByTo {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
   '/admin/affiliates': typeof AuthenticatedAdminAffiliatesRoute
+  '/admin/bulk-sms': typeof AuthenticatedAdminBulkSmsRoute
   '/admin/consent': typeof AuthenticatedAdminConsentRoute
   '/admin/corporate-topup': typeof AuthenticatedAdminCorporateTopupRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
@@ -373,6 +382,7 @@ export interface FileRoutesById {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/_authenticated/admin/affiliates': typeof AuthenticatedAdminAffiliatesRoute
+  '/_authenticated/admin/bulk-sms': typeof AuthenticatedAdminBulkSmsRoute
   '/_authenticated/admin/consent': typeof AuthenticatedAdminConsentRoute
   '/_authenticated/admin/corporate-topup': typeof AuthenticatedAdminCorporateTopupRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
@@ -416,6 +426,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions/'
     | '/admin/affiliates'
+    | '/admin/bulk-sms'
     | '/admin/consent'
     | '/admin/corporate-topup'
     | '/admin/dashboard'
@@ -457,6 +468,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions'
     | '/admin/affiliates'
+    | '/admin/bulk-sms'
     | '/admin/consent'
     | '/admin/corporate-topup'
     | '/admin/dashboard'
@@ -499,6 +511,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions/'
     | '/_authenticated/admin/affiliates'
+    | '/_authenticated/admin/bulk-sms'
     | '/_authenticated/admin/consent'
     | '/_authenticated/admin/corporate-topup'
     | '/_authenticated/admin/dashboard'
@@ -803,6 +816,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminConsentRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/bulk-sms': {
+      id: '/_authenticated/admin/bulk-sms'
+      path: '/bulk-sms'
+      fullPath: '/admin/bulk-sms'
+      preLoaderRoute: typeof AuthenticatedAdminBulkSmsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/affiliates': {
       id: '/_authenticated/admin/affiliates'
       path: '/affiliates'
@@ -829,6 +849,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAffiliatesRoute: typeof AuthenticatedAdminAffiliatesRoute
+  AuthenticatedAdminBulkSmsRoute: typeof AuthenticatedAdminBulkSmsRoute
   AuthenticatedAdminConsentRoute: typeof AuthenticatedAdminConsentRoute
   AuthenticatedAdminCorporateTopupRoute: typeof AuthenticatedAdminCorporateTopupRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
@@ -838,6 +859,7 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAffiliatesRoute: AuthenticatedAdminAffiliatesRoute,
+  AuthenticatedAdminBulkSmsRoute: AuthenticatedAdminBulkSmsRoute,
   AuthenticatedAdminConsentRoute: AuthenticatedAdminConsentRoute,
   AuthenticatedAdminCorporateTopupRoute: AuthenticatedAdminCorporateTopupRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
