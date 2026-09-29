@@ -35,6 +35,11 @@ import { Route as AuthenticatedCustomerTransactionsRouteImport } from './routes/
 import { Route as AuthenticatedCustomerRewardsRouteImport } from './routes/_authenticated/customer.rewards'
 import { Route as AuthenticatedCustomerProfileRouteImport } from './routes/_authenticated/customer.profile'
 import { Route as AuthenticatedCustomerDashboardRouteImport } from './routes/_authenticated/customer.dashboard'
+import { Route as AuthenticatedAffiliatesWithdrawalsRouteImport } from './routes/_authenticated/affiliates.withdrawals'
+import { Route as AuthenticatedAffiliatesNotificationsRouteImport } from './routes/_authenticated/affiliates.notifications'
+import { Route as AuthenticatedAffiliatesMarketingRouteImport } from './routes/_authenticated/affiliates.marketing'
+import { Route as AuthenticatedAffiliatesLinksRouteImport } from './routes/_authenticated/affiliates.links'
+import { Route as AuthenticatedAffiliatesEarningsRouteImport } from './routes/_authenticated/affiliates.earnings'
 import { Route as AuthenticatedAffiliatesDashboardRouteImport } from './routes/_authenticated/affiliates.dashboard'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminRoleRequestsRouteImport } from './routes/_authenticated/admin.role-requests'
@@ -182,6 +187,36 @@ const AuthenticatedCustomerDashboardRoute =
     path: '/customer/dashboard',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAffiliatesWithdrawalsRoute =
+  AuthenticatedAffiliatesWithdrawalsRouteImport.update({
+    id: '/affiliates/withdrawals',
+    path: '/affiliates/withdrawals',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAffiliatesNotificationsRoute =
+  AuthenticatedAffiliatesNotificationsRouteImport.update({
+    id: '/affiliates/notifications',
+    path: '/affiliates/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAffiliatesMarketingRoute =
+  AuthenticatedAffiliatesMarketingRouteImport.update({
+    id: '/affiliates/marketing',
+    path: '/affiliates/marketing',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAffiliatesLinksRoute =
+  AuthenticatedAffiliatesLinksRouteImport.update({
+    id: '/affiliates/links',
+    path: '/affiliates/links',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAffiliatesEarningsRoute =
+  AuthenticatedAffiliatesEarningsRouteImport.update({
+    id: '/affiliates/earnings',
+    path: '/affiliates/earnings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAffiliatesDashboardRoute =
   AuthenticatedAffiliatesDashboardRouteImport.update({
     id: '/affiliates/dashboard',
@@ -260,6 +295,11 @@ export interface FileRoutesByFullPath {
   '/admin/role-requests': typeof AuthenticatedAdminRoleRequestsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/affiliates/dashboard': typeof AuthenticatedAffiliatesDashboardRoute
+  '/affiliates/earnings': typeof AuthenticatedAffiliatesEarningsRoute
+  '/affiliates/links': typeof AuthenticatedAffiliatesLinksRoute
+  '/affiliates/marketing': typeof AuthenticatedAffiliatesMarketingRoute
+  '/affiliates/notifications': typeof AuthenticatedAffiliatesNotificationsRoute
+  '/affiliates/withdrawals': typeof AuthenticatedAffiliatesWithdrawalsRoute
   '/customer/dashboard': typeof AuthenticatedCustomerDashboardRoute
   '/customer/profile': typeof AuthenticatedCustomerProfileRoute
   '/customer/rewards': typeof AuthenticatedCustomerRewardsRoute
@@ -296,6 +336,11 @@ export interface FileRoutesByTo {
   '/admin/role-requests': typeof AuthenticatedAdminRoleRequestsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/affiliates/dashboard': typeof AuthenticatedAffiliatesDashboardRoute
+  '/affiliates/earnings': typeof AuthenticatedAffiliatesEarningsRoute
+  '/affiliates/links': typeof AuthenticatedAffiliatesLinksRoute
+  '/affiliates/marketing': typeof AuthenticatedAffiliatesMarketingRoute
+  '/affiliates/notifications': typeof AuthenticatedAffiliatesNotificationsRoute
+  '/affiliates/withdrawals': typeof AuthenticatedAffiliatesWithdrawalsRoute
   '/customer/dashboard': typeof AuthenticatedCustomerDashboardRoute
   '/customer/profile': typeof AuthenticatedCustomerProfileRoute
   '/customer/rewards': typeof AuthenticatedCustomerRewardsRoute
@@ -334,6 +379,11 @@ export interface FileRoutesById {
   '/_authenticated/admin/role-requests': typeof AuthenticatedAdminRoleRequestsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/affiliates/dashboard': typeof AuthenticatedAffiliatesDashboardRoute
+  '/_authenticated/affiliates/earnings': typeof AuthenticatedAffiliatesEarningsRoute
+  '/_authenticated/affiliates/links': typeof AuthenticatedAffiliatesLinksRoute
+  '/_authenticated/affiliates/marketing': typeof AuthenticatedAffiliatesMarketingRoute
+  '/_authenticated/affiliates/notifications': typeof AuthenticatedAffiliatesNotificationsRoute
+  '/_authenticated/affiliates/withdrawals': typeof AuthenticatedAffiliatesWithdrawalsRoute
   '/_authenticated/customer/dashboard': typeof AuthenticatedCustomerDashboardRoute
   '/_authenticated/customer/profile': typeof AuthenticatedCustomerProfileRoute
   '/_authenticated/customer/rewards': typeof AuthenticatedCustomerRewardsRoute
@@ -372,6 +422,11 @@ export interface FileRouteTypes {
     | '/admin/role-requests'
     | '/admin/users'
     | '/affiliates/dashboard'
+    | '/affiliates/earnings'
+    | '/affiliates/links'
+    | '/affiliates/marketing'
+    | '/affiliates/notifications'
+    | '/affiliates/withdrawals'
     | '/customer/dashboard'
     | '/customer/profile'
     | '/customer/rewards'
@@ -408,6 +463,11 @@ export interface FileRouteTypes {
     | '/admin/role-requests'
     | '/admin/users'
     | '/affiliates/dashboard'
+    | '/affiliates/earnings'
+    | '/affiliates/links'
+    | '/affiliates/marketing'
+    | '/affiliates/notifications'
+    | '/affiliates/withdrawals'
     | '/customer/dashboard'
     | '/customer/profile'
     | '/customer/rewards'
@@ -445,6 +505,11 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/role-requests'
     | '/_authenticated/admin/users'
     | '/_authenticated/affiliates/dashboard'
+    | '/_authenticated/affiliates/earnings'
+    | '/_authenticated/affiliates/links'
+    | '/_authenticated/affiliates/marketing'
+    | '/_authenticated/affiliates/notifications'
+    | '/_authenticated/affiliates/withdrawals'
     | '/_authenticated/customer/dashboard'
     | '/_authenticated/customer/profile'
     | '/_authenticated/customer/rewards'
@@ -661,6 +726,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCustomerDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/affiliates/withdrawals': {
+      id: '/_authenticated/affiliates/withdrawals'
+      path: '/affiliates/withdrawals'
+      fullPath: '/affiliates/withdrawals'
+      preLoaderRoute: typeof AuthenticatedAffiliatesWithdrawalsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/affiliates/notifications': {
+      id: '/_authenticated/affiliates/notifications'
+      path: '/affiliates/notifications'
+      fullPath: '/affiliates/notifications'
+      preLoaderRoute: typeof AuthenticatedAffiliatesNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/affiliates/marketing': {
+      id: '/_authenticated/affiliates/marketing'
+      path: '/affiliates/marketing'
+      fullPath: '/affiliates/marketing'
+      preLoaderRoute: typeof AuthenticatedAffiliatesMarketingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/affiliates/links': {
+      id: '/_authenticated/affiliates/links'
+      path: '/affiliates/links'
+      fullPath: '/affiliates/links'
+      preLoaderRoute: typeof AuthenticatedAffiliatesLinksRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/affiliates/earnings': {
+      id: '/_authenticated/affiliates/earnings'
+      path: '/affiliates/earnings'
+      fullPath: '/affiliates/earnings'
+      preLoaderRoute: typeof AuthenticatedAffiliatesEarningsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/affiliates/dashboard': {
       id: '/_authenticated/affiliates/dashboard'
       path: '/affiliates/dashboard'
@@ -752,6 +852,11 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedAffiliatesDashboardRoute: typeof AuthenticatedAffiliatesDashboardRoute
+  AuthenticatedAffiliatesEarningsRoute: typeof AuthenticatedAffiliatesEarningsRoute
+  AuthenticatedAffiliatesLinksRoute: typeof AuthenticatedAffiliatesLinksRoute
+  AuthenticatedAffiliatesMarketingRoute: typeof AuthenticatedAffiliatesMarketingRoute
+  AuthenticatedAffiliatesNotificationsRoute: typeof AuthenticatedAffiliatesNotificationsRoute
+  AuthenticatedAffiliatesWithdrawalsRoute: typeof AuthenticatedAffiliatesWithdrawalsRoute
   AuthenticatedCustomerDashboardRoute: typeof AuthenticatedCustomerDashboardRoute
   AuthenticatedCustomerProfileRoute: typeof AuthenticatedCustomerProfileRoute
   AuthenticatedCustomerRewardsRoute: typeof AuthenticatedCustomerRewardsRoute
@@ -767,6 +872,13 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedAffiliatesDashboardRoute: AuthenticatedAffiliatesDashboardRoute,
+  AuthenticatedAffiliatesEarningsRoute: AuthenticatedAffiliatesEarningsRoute,
+  AuthenticatedAffiliatesLinksRoute: AuthenticatedAffiliatesLinksRoute,
+  AuthenticatedAffiliatesMarketingRoute: AuthenticatedAffiliatesMarketingRoute,
+  AuthenticatedAffiliatesNotificationsRoute:
+    AuthenticatedAffiliatesNotificationsRoute,
+  AuthenticatedAffiliatesWithdrawalsRoute:
+    AuthenticatedAffiliatesWithdrawalsRoute,
   AuthenticatedCustomerDashboardRoute: AuthenticatedCustomerDashboardRoute,
   AuthenticatedCustomerProfileRoute: AuthenticatedCustomerProfileRoute,
   AuthenticatedCustomerRewardsRoute: AuthenticatedCustomerRewardsRoute,
