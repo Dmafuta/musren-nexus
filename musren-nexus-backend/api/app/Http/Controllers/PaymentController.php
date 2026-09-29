@@ -13,7 +13,7 @@ class PaymentController extends Controller
 
     /**
      * POST /api/payments/topup — initiates STK Push for customer wallet top-up.
-     * Requires JWT auth (SupabaseJwt middleware).
+     * Requires JWT auth (JwtAuth middleware).
      */
     public function topup(Request $request): JsonResponse
     {

@@ -35,13 +35,6 @@ return [
         ],
     ],
 
-    // ─── Supabase ──────────────────────────────────────────────────────────────
-    'supabase' => [
-        'url'              => env('SUPABASE_URL'),
-        'jwt_secret'       => env('SUPABASE_JWT_SECRET'),
-        'service_role_key' => env('SUPABASE_SERVICE_ROLE_KEY'),
-    ],
-
     // ─── M-Pesa Daraja ────────────────────────────────────────────────────────
     'mpesa' => [
         'consumer_key'        => env('MPESA_CONSUMER_KEY'),

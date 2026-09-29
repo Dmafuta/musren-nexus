@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Usage: RequireRole:admin,superadmin
- * Reads the app_role claim injected by SupabaseJwt middleware.
+ * Reads the auth_roles attribute injected by JwtAuth middleware.
  */
 class RequireRole
 {
