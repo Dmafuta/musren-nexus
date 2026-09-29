@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Zap, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { dashboardForAccess } from "@/lib/onboarding";
+import { dashboardForAccess, isRoleAssigned } from "@/lib/onboarding";
 import { toast } from "sonner";
 
 const searchSchema = z.object({ redirect: z.string().optional() });
@@ -59,12 +59,18 @@ function LoginPage() {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      const target = dashboardForAccess(null, roles);
       const safeRedirect =
         search.redirect && !search.redirect.startsWith("/admin") && search.redirect !== "/select-role"
           ? search.redirect
           : undefined;
-      navigate({ to: (safeRedirect ?? target) as "/dashboard", replace: true });
+      // Users with no workspace/privileged role go to /dashboard first — it handles
+      // superadmin claiming and select-role onboarding. Skip that hub only when a
+      // specific dashboard is already known.
+      const hasSpecificDashboard =
+        isRoleAssigned(roles) ||
+        roles.some((r) => ["superadmin", "admin", "staff"].includes(r));
+      const target = safeRedirect ?? (hasSpecificDashboard ? dashboardForAccess(null, roles) : "/dashboard");
+      navigate({ to: target as "/dashboard", replace: true });
     }
   }, [loading, isAuthenticated, navigate, search.redirect, roles]);
 
